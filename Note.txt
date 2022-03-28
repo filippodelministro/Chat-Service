@@ -1,0 +1,26 @@
+
+DONE:
+    - Makefile
+    - Server:
+        · boot_command
+        · create_listening_socket
+    - Dev:
+        · boot_command
+        · create_listening_socket
+
+
+TODO:
+    - Dev:
+        · signup
+        · in
+        · hanging
+        · show
+        · chat
+        · share
+        · out
+    - Server
+        · help
+        · list
+        · esc
+
+
