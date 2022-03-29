@@ -15,23 +15,3 @@
 
 #define MAX_DEVICES         100    
 
-int listener;
-int my_port;
-struct sockaddr_in my_addr;
-
-
-// File descriptor table utility
-int fdmax;
-fd_set master;
-fd_set read_fds;
-fd_set write_fds;
-
-
-//-----------     DEVICE    -----------------
-struct device{
-    int port;           // port number       
-    int sd;             // TCP socket
-}devices[MAX_DEVICES];  //devices array
-
-// int n_dev = 0;                  //number of devices
-
