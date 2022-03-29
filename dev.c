@@ -246,7 +246,6 @@ int main(int argc, char* argv[]){
                     //connection request by server
                 }
 
-
                 //clear buffer and prompt
                 memset(buffer, 0, BUFFER_SIZE);
                 prompt();
