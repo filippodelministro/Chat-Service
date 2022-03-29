@@ -10,8 +10,8 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define BUFFER_SIZE         1024
-#define MSG_LEN             9
+#define BUFFER_SIZE         4096
+#define COMMAND_LENGHT      1024
 
 #define MAX_DEVICES         100    
 

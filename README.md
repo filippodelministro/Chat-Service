@@ -15,8 +15,8 @@ The two main file are
 
 Both of this file are devided in few sector:
     - DECLARATION   :a generic list of data structure and variables declaration
-    - UTILTY        :utility function (such as in/out function)
     - COMMAND       :command list that can be used by user (different from server to device)
+    - UTILTY        :utility function (such as in/out function)
     - FUNCTION      :function used by main function (can not be used by the user)
     - MAIN          :main program
 

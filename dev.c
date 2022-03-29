@@ -4,21 +4,28 @@
 ///                             DECLARATION                            ///
 //////////////////////////////////////////////////////////////////////////
 
+//-----------     SERVER    -----------------
+//each device has a socket to the server
+// int srv_socket_udp;
+// struct sockaddr_in srv_addr_udp;
+int srv_socket_tcp;
+struct sockaddr_in srv_addr_tcp; 
+
+
 //-----------     DEVICE    -----------------
 int my_port;
 bool connected;
 struct sockaddr_in my_addr;
 
 // //each device has a port and a socket descriptor
-// struct device{
-//     int port;           // port number       
-//     int sd;             // TCP socket
-// }devices[MAX_DEVICES];  //devices array
+struct device{
+    int port;           // port number       
+    int sd;             // TCP socket
+}devices[MAX_DEVICES];  //devices array
 
 // //each device socket has an address
 // struct sockaddr_in dev_addr[MAX_DEVICES];   //device address
 // int n_dev = 0;                              //number of devices
-
 
 //-----------     SET    -----------------
 //socket which listen connect request from other devices
@@ -28,39 +35,6 @@ fd_set master;          //main set: managed with macro
 fd_set read_fds;        //read set: managed from select() 
 int fdmax;
 
-//each device has a socket to the server
-// int srv_socket_udp;
-// struct sockaddr_in srv_addr_udp;
-int srv_socket_tcp;
-struct sockaddr_in srv_addr_tcp; 
-
-
-//maybe in an unic extern file utility.c            ???
-//////////////////////////////////////////////////////////////////////////
-///                              UTILITY                               ///
-//////////////////////////////////////////////////////////////////////////
-
-void prompt()
-{
-	printf("\n> ");
-    fflush(stdout);
-}    
-
-//prompt a boot message on stdout
-void boot_message(){
-    printf("**********************PEER %d**********************\n", my_port);
-    printf( "Create an account or login to continue:\n\n"
-                "1) signup <username> <password>        --> create account\n"
-                "2) in <srv_port> <username> <password> --> connect to server\n"
-    );
-}
-
-//to do         ???
-//legge da tatstiera il comando e lo fa gestire da un figlio
-//con uno switch case
-void read_command(){
-
-}
 
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
@@ -108,6 +82,35 @@ void out_command(){
 
 }
 
+
+//maybe in an unic extern file utility.c            ???
+//////////////////////////////////////////////////////////////////////////
+///                              UTILITY                               ///
+//////////////////////////////////////////////////////////////////////////
+
+void prompt()
+{
+	printf("\n> ");
+    fflush(stdout);
+}    
+
+//prompt a boot message on stdout
+void boot_message(){
+    printf("**********************PEER %d**********************\n", my_port);
+    printf( "Create an account or login to continue:\n\n"
+                "1) signup <username> <password>        --> create account\n"
+                "2) in <srv_port> <username> <password> --> connect to server\n"
+    );
+}
+
+//to do         ???
+
+//legge da tatstiera il comando e lo fa gestire da un figlio
+//con uno switch case
+//command for routine services
+void read_command(){
+
+}
 
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
@@ -181,57 +184,65 @@ void create_srv_socket_tcp(char* p){
 
 int main(int argc, int argv[]){
     
-    /*
-    */
-    //creazione socket
-    int ret, sd, len;
-    char buffer[1024];
+    int i, newfd, ret;
+    socklen_t addrlen;
+    char buffer[BUFFER_SIZE];
 
-    //da modificare ???
-    create_srv_socket_tcp("4242");
-
-    if(recv(srv_socket_tcp, (void*)buffer, MSG_LEN, 0) == -1){
-        perror("[client]: Errore nella recv");
-        exit(-1);
+    /*Stabilire utilizzo porta      ???
+    if(argc != 2){
+		fprintf(stderr, "Error! Correct syntax: ./server <porta>\n"); 
+		exit(-1);
     }
 
-    buffer[MSG_LEN] = '\0';
-    printf("%s\n", buffer);
-
-    close(srv_socket_tcp);
-
-
-    ///////////////////////////////////////////////////////////////////
-
-    /*
-    int ret, sd, len;
-    struct sockaddr_in srv_addr;
-    char buffer[1024];
-
-    sd = socket(AF_INET, SOCK_STREAM, 0);       //SOCK_DGRAM per socket UDP
-    memset(&srv_addr, 0, sizeof(srv_addr));
-    srv_addr.sin_family = AF_INET;
-    srv_addr.sin_port = htons(4242);
-    inet_pton(AF_INET, "127.0.0.1", &srv_addr.sin_addr);
-
-    //collegamento 
-    ret = connect(sd, (struct sockaddr*)&srv_addr, sizeof(srv_addr));
-    if(ret < 0){
-        perror("[client]: Errore nella connect");
-        exit(-1);
-    }
-
-    ret = recv(sd, (void*)buffer, MSG_LEN, 0);
-    if(ret < 0){
-        perror("[client]: Errore nella recv");
-        exit(-1);
-    }
-
-    buffer[MSG_LEN] = '\0';
-    printf("%s\n", buffer);
-
-    close(sd);
+    my_port = atoi(argv[1]);
     */
 
+   //Initialise set structure 
+	fdt_init();
 
+	FD_SET(listening_socket, &master);
+	fdmax = listening_socket;
+
+    //prompt boot message
+    boot_message();
+    prompt();
+
+
+    while(true){
+
+        read_fds = master;
+
+        if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("[device]=> ERROR: SELECT() ");
+			exit(-1);
+		}
+
+        for(i=0; i<=fdmax; i++){
+
+            if(FD_ISSET(i, &read_fds)){
+                
+                if(i == 0){
+                    //keyboard
+
+
+                    read_command();
+                }
+
+                else if(i == listening_socket){
+                    //connection request
+
+                    printf("[server]> Connection request");
+                }
+                
+                else if(i == srv_socket_tcp){
+                    //connection request by server
+                }
+
+
+                //clear buffer and prompt
+                memset(buffer, 0, BUFFER_SIZE);
+                prompt();
+            }
+        }
+    }
 }

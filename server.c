@@ -4,12 +4,23 @@
 ///                             DECLARATION                            ///
 //////////////////////////////////////////////////////////////////////////
 
-int listening_socket;    //socket listener (get connect/service request)
+//-----------     SERVER    -----------------
 int my_port;
 struct sockaddr_in my_addr;
 
+
+//-----------     DEVICES    -----------------
+struct device{
+    int port;           // port number       
+    int sd;             // TCP socket
+}devices[MAX_DEVICES];  //devices array
+
+
+//-----------     SET    -----------------
+int listening_socket;    //socket listener (get connect/service request)
+
 fd_set master;          //main set: managed with macro 
-fd_set read_fds;        //read set: managed from select() 
+fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
 /*
@@ -19,31 +30,6 @@ struct sockaddr_in cl_addr[MAX_DEVICES];    //array of socket
 
 char buffer[BUFFER_SIZE];
 */
-
-
-
-//maybe in an unic extern file utility.c            ???
-//////////////////////////////////////////////////////////////////////////
-///                              UTILITY                               ///
-//////////////////////////////////////////////////////////////////////////
-
-void prompt()
-{
-	printf("\n> ");
-    fflush(stdout);
-}    
-
-void boot_message(){
-    printf("**********************SERVER STARTED**********************\n");
-    help_command();
-}
-
-//to do         ???
-//legge da tatstiera il comando e lo fa gestire da un figlio
-//con uno switch case
-void read_command(){
-
-}
 
 //What a server user can use to interact with server
 //////////////////////////////////////////////////////////////////////////
@@ -68,6 +54,50 @@ void esc_command(){
 }
 
 
+//maybe in an unic extern file utility.c            ???
+//////////////////////////////////////////////////////////////////////////
+///                              UTILITY                               ///
+//////////////////////////////////////////////////////////////////////////
+
+void prompt()
+{
+	printf("\n> ");
+    fflush(stdout);
+}    
+
+void help_command();
+
+void boot_message(){
+    printf("**********************SERVER STARTED**********************\n");
+    help_command();
+}
+
+//to do         ???
+//legge da tatstiera il comando e lo fa gestire da un figlio
+//con uno switch case
+void read_command(){
+    
+    char cmd[COMMAND_LENGHT];
+
+    get_cmd:
+    scanf("%1024s", cmd);
+
+    if(!strncmp(cmd, "help", 4))
+        help_command();
+    else if(!strncmp(cmd, "list", 4))
+        list_command();
+    else if(!strncmp(cmd, "esc", 3))
+        esc_command();
+    else{
+        printf("[server] Not valid command\n");
+        help_command();
+        goto get_cmd;
+    }
+    prompt();
+}
+
+
+
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
 ///                             FUNCTION                               ///
@@ -82,6 +112,29 @@ void fdt_init(){
 	fdmax = 0;
 }
 
+void create_tcp_socket(char* port){
+
+    //crate socket
+    if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("[server] error socket()\n");
+        exit(-1);
+    }
+
+    //create address
+    memset(&my_addr, 0, sizeof(my_addr));
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    my_addr.sin_port = htons(atoi(port));
+
+    //linking address
+    if(bind(listening_socket, (struct sockaddr*)&my_addr, sizeof(my_addr)) == -1){
+        perror("[server] Error bind: \n");
+        exit(-1);
+    }
+
+}
+
+
 //to do                 ???
 //prende opcode dal device (recv), poi lo fa gestire da un 
 //processo figlio con uno switch case
@@ -94,55 +147,15 @@ void handle_request(){
 ///                             MAIN                                   ///
 //////////////////////////////////////////////////////////////////////////
 
-/*  old main, to check "Hello"
-int main(int argc, int argv[]){
-    //creazione socket
-    int ret, sd, new_sd, len;
-    struct sockaddr_in my_addr, cl_addr;
-    char buffer[1024];
-
-    sd = socket(AF_INET, SOCK_STREAM, 0);       //SOCK_DGRAM per socket UDP
-    memset(&my_addr, 0, sizeof(my_addr));
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_port = htons(4242);
-    inet_pton(AF_INET, "127.0.0.1", &my_addr.sin_addr);
-
-    //collegamento 
-    ret = bind(sd, (struct sockaddr*)&my_addr, sizeof(my_addr));
-    ret = listen(sd, 10);
-    if(ret < 0){
-        perror("[server]: Errore nella listen");
-        exit(-1);
-    }
-
-    while(1){       //ciclicamente:
-        len = sizeof(cl_addr);
-        new_sd = accept(sd, (struct sockaddr*)&cl_addr, &len);
-
-        strcpy(buffer, "Hello");
-        len = strlen(buffer);
-
-        ret = send(new_sd, (void*)buffer, len, 0);
-        if(ret < 0)
-            perror("[server]: Errore nella send");
-        
-        close(new_sd);
-    }
-}
-*/
-
-
 int main(int argc, char** argv){
 
-    /*Stabilire utilizzo porta      ???
     if(argc != 2){
-		fprintf(stderr, "Error! Correct syntax: ./server <porta>\n"); 
+		fprintf(stderr, "Error! Correct syntax: ./server <port>\n"); 
 		exit(-1);
     }
-    */
     
-    // Creo socket per ricevere messaggi UDP dai peer       ???
-	// create_listening_socket(argv[1]);
+    //create socket to get request
+	create_tcp_socket(argv[1]);
 	
     //Initialise set structure 
 	fdt_init();
@@ -163,7 +176,7 @@ int main(int argc, char** argv){
         read_fds = master;
 
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-			perror("[server]=> ERROR: SELECT() ");
+			perror("[server] error: select() ");
 			exit(-1);
 		}
 
