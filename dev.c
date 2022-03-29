@@ -14,7 +14,7 @@ struct sockaddr_in srv_addr_tcp;
 
 //-----------     DEVICE    -----------------
 int my_port;
-bool connected;
+bool connected = false;
 struct sockaddr_in my_addr;
 
 // //each device has a port and a socket descriptor
@@ -44,7 +44,7 @@ int fdmax;
 //prompt an help list message on stdout
 void help_command()
 {
-	printf( "Type a command:\n\n"
+	printf( "Type a command:\n"
             "1) hanging                             --> receive old msg\n"
             "2) show                                --> ??\n"
             "3) chat                                --> ??\n"
@@ -55,31 +55,33 @@ void help_command()
 
 //to do         ???
 void signup_command(){
-
+    connected = true;
+    printf("COMANDO SIGNUP ESEGUITO \n");
 }
 
 void in_command(){
-
+    connected = true;
+    printf("COMANDO IN ESEGUITO \n");
 }
 
 void hanging_command(){
-
+    printf("COMANDO HANGING ESEGUITO \n");
 }
 
 void show_command(){
-
+    printf("COMANDO SHOW ESEGUITO \n");
 }
 
 void chat_command(){
-
+    printf("COMANDO CHAT ESEGUITO \n");
 }
 
 void share_command(){
-
+    printf("COMANDO SHARE ESEGUITO \n");
 }
 
 void out_command(){
-
+    printf("COMANDO OUT ESEGUITO \n");
 }
 
 
@@ -88,8 +90,7 @@ void out_command(){
 ///                              UTILITY                               ///
 //////////////////////////////////////////////////////////////////////////
 
-void prompt()
-{
+void prompt(){
 	printf("\n> ");
     fflush(stdout);
 }    
@@ -97,19 +98,59 @@ void prompt()
 //prompt a boot message on stdout
 void boot_message(){
     printf("**********************PEER %d**********************\n", my_port);
-    printf( "Create an account or login to continue:\n\n"
+    printf( "Create an account or login to continue:\n"
                 "1) signup <username> <password>        --> create account\n"
                 "2) in <srv_port> <username> <password> --> connect to server\n"
     );
 }
 
-//to do         ???
-
-//legge da tatstiera il comando e lo fa gestire da un figlio
-//con uno switch case
 //command for routine services
 void read_command(){
 
+    char cmd[COMMAND_LENGHT];
+
+    //get commando from stdin
+    scanf("%s", cmd);
+
+    //signup and in allowed only if not connected
+    //other command allowed only if connected
+    
+    if(!strncmp(cmd, "signup", 6)){
+        if(!connected)
+            signup_command();
+        else{
+            printf("device already connected! Try one of below:\n");
+            help_command();
+        }
+    }
+	else if (!strncmp(cmd, "in", 2)){
+        if(!connected)
+            in_command();
+        else{
+            printf("device already connected! Try one of below:\n");
+            help_command();
+        }
+    }
+	else if (!strncmp(cmd, "hanging", 7) && connected)	
+		hanging_command();
+    else if (!strncmp(cmd, "show", 4) && connected)	
+		show_command();
+    else if (!strncmp(cmd, "chat", 4) && connected)	
+		chat_command();
+	else if (!strncmp(cmd, "share", 5) && connected)	
+        share_command();
+    else if (!strncmp(cmd, "out", 3) && connected)
+        out_command();
+
+    //command is not valid; ask to help_command and show available command
+	else{
+		fprintf(stderr, "Not valid command. Want help? Y/N\n");
+        int c = scanf("%1s", cmd);
+        if(c == 'Y' || 'y'){
+            if(connected) help_command();
+            else boot_message();
+        }
+    }						
 }
 
 //Function called by the server so manage socket and interaction with devices
@@ -125,36 +166,6 @@ void fdt_init(){
 	
 	fdmax = 0;
 }
-
-//to do                 ???
-
-/* create_scoket
-create a socket a srv_socket for who call the functionon port p; TCP if udp is false, UDP instead
-it call socket and connect
-TCP if u = true, UDP instead
-void create_srv_socket(bool tcp, char* p){
-    int sd = (tcp) ? srv_socket_tcp : srv_socket_udp;
-    struct sockaddr_in sd_addr = (tcp) ? srv_addr_tcp : srv_addr_udp;
-
-    //create
-    if((sd = socket(AF_INET, (tcp) ? SOCK_STREAM : SOCK_DGRAM, 0)) == -1){
-        perror("socket() error");
-        exit(-1);
-    }
-
-    //address
-    memset(&sd_addr, 0, sizeof(sd_addr));
-    my_addr.sin_family = AF_INET;
-    // my_addr.sin_port = htons(atoi(p));
-    my_addr.sin_port = htons(4242);
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-
-    if(connect(sd, (struct sockaddr*)&sd_addr, sizeof(sd_addr))){
-        perror("[client]: ERROR CONNECT> ");
-        exit(-1);
-    }
-}
-*/
 
 void create_srv_socket_tcp(char* p){
 
@@ -182,38 +193,37 @@ void create_srv_socket_tcp(char* p){
 ///                             MAIN                                   ///
 //////////////////////////////////////////////////////////////////////////
 
-int main(int argc, int argv[]){
+int main(int argc, char* argv[]){
     
     int i, newfd, ret;
     socklen_t addrlen;
     char buffer[BUFFER_SIZE];
 
-    /*Stabilire utilizzo porta      ???
     if(argc != 2){
-		fprintf(stderr, "Error! Correct syntax: ./server <porta>\n"); 
+		fprintf(stderr, "Error! Correct syntax: ./dev <port>\n"); 
 		exit(-1);
     }
 
     my_port = atoi(argv[1]);
-    */
 
    //Initialise set structure 
 	fdt_init();
 
+    /*
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
+    */
 
     //prompt boot message
     boot_message();
     prompt();
-
 
     while(true){
 
         read_fds = master;
 
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-			perror("[device]=> ERROR: SELECT() ");
+			perror("[device] error select() ");
 			exit(-1);
 		}
 
@@ -223,8 +233,6 @@ int main(int argc, int argv[]){
                 
                 if(i == 0){
                     //keyboard
-
-
                     read_command();
                 }
 

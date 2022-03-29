@@ -46,11 +46,11 @@ void help_command(){
 
 //to do         ???
 void list_command(){
-
+    printf("LIST COMMAND ESEGUITO\n");
 }
 
 void esc_command(){
-
+    printf("ESC COMMAND ESEGUITO\n");
 }
 
 
@@ -80,7 +80,7 @@ void read_command(){
     char cmd[COMMAND_LENGHT];
 
     get_cmd:
-    scanf("%1024s", cmd);
+    scanf("%s", cmd);
 
     if(!strncmp(cmd, "help", 4))
         help_command();
@@ -91,6 +91,7 @@ void read_command(){
     else{
         printf("[server] Not valid command\n");
         help_command();
+        prompt();
         goto get_cmd;
     }
     prompt();
