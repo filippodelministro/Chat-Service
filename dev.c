@@ -35,6 +35,26 @@ fd_set master;          //main set: managed with macro
 fd_set read_fds;        //read set: managed from select() 
 int fdmax;
 
+
+//maybe in an unic extern file utility.c            ???
+//////////////////////////////////////////////////////////////////////////
+///                              UTILITY                               ///
+//////////////////////////////////////////////////////////////////////////
+
+void prompt(){
+	printf("\n> ");
+    fflush(stdout);
+}
+
+//prompt a boot message on stdout
+void boot_message(){
+    printf("**********************PEER %d**********************\n", my_port);
+    printf( "Create an account or login to continue:\n"
+                "1) signup <username> <password>        --> create account\n"
+                "2) in <srv_port> <username> <password> --> connect to server\n"
+    );
+}
+
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
 ///                             FUNCTION                               ///
@@ -88,7 +108,7 @@ void send_opcode_recv_ack(int o){
 
     //receive akc to proceed
     // while(recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0) < 0);
-    recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
+    recv(listening_socket, buffer, BUFFER_SIZE, 0);
 }
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
@@ -110,16 +130,37 @@ void help_command()
 //to do         ???
 void signup_command(){
 
+    char username[1024];
+    char password[1024];
     char buffer[BUFFER_SIZE];
 
+    //create socket to communicate with serveer
     create_srv_socket_tcp(my_port);
 
+    ////send opcode to server and wait for ACK
     printf("[device] signup_command: send opcode to server...\n");
     send_opcode_recv_ack(SIGNUP_OPCODE);
-    printf("[device] signup_command: Received acknoledge!\n");
+    printf("[device] signup_command: Received acknoledge!\n"
+            "Insert username and password to continue\n"
+        );
 
+    //get username and password from stdin
+    scanf("%s", username);
+    scanf("%s", password);
+
+    //da levare
+    printf("[device] signup_command: got your usr and pswd\n");    
+    printf("[device] signup_command: username: %s \n", username);
+    printf("[device] signup_command: password: %s \n", password);
+    
+    
+    //send usrn and pswd to server and wait for ACK
+    
+
+    //complete: device is now online
     connected = true;
-
+    printf("[device] You are now online!\n"); 
+ 
     // to do ??? to speak witch other deiveces
     // create_dev_socket_tcp();
 
@@ -157,24 +198,7 @@ void out_command(){
 }
 
 
-//maybe in an unic extern file utility.c            ???
-//////////////////////////////////////////////////////////////////////////
-///                              UTILITY                               ///
-//////////////////////////////////////////////////////////////////////////
 
-void prompt(){
-	printf("\n> ");
-    fflush(stdout);
-}    
-
-//prompt a boot message on stdout
-void boot_message(){
-    printf("**********************PEER %d**********************\n", my_port);
-    printf( "Create an account or login to continue:\n"
-                "1) signup <username> <password>        --> create account\n"
-                "2) in <srv_port> <username> <password> --> connect to server\n"
-    );
-}
 
 //command for routine services
 void read_command(){

@@ -164,42 +164,34 @@ void handle_request(){
     //accept new connection    
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
 
-    while(
-        //waiting for request
-        (ret = recv(new_dev, buffer, BUFFER_SIZE, 0)) != 0
-    )
-    /*if(ret < 0)
-        return;*/
-
-    //get opcode
+    //receive opcode from client
+    if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
+        perror("[server]: Error recv: \n");
+        exit(-1);
+    }
+   
+    //get opcode (transform to use)
 	memcpy(&opcode, (uint16_t *) &buffer, 2);
     opcode = ntohs(opcode);
-
     printf("[server] handle_request: received opcode: "
             "%d", opcode, "\n");
-    // printf("%d", opcode, "\n");
-
-    /*
-    //managed by a son process
+    
+    //let a child process to manage  
     pid = fork();
     if(pid < 0){
         printf("[server] error fork()\n");
         exit(-1);
     }
-    */
-
-    // if(pid == 0){
+    
+    if(pid == 0){
         //son process
         switch (opcode){
         case 0:
             //signup
-            
-            // send_ack();
-
             printf("\n[server] handle_request: Received connection request\n");
-            send(new_dev, buffer, strlen(buffer), 0);
+            send(new_dev, buffer, strlen(buffer), 0);           //send ACK
             printf("[server] handle_request: ACK sent!\n");
-            
+
             break;
 
         case 1:
@@ -211,11 +203,11 @@ void handle_request(){
         default:
             break;
         }
-    // }
-    // else{
+    }
+    else{
         //father process
 
-    // }
+    }
 }
 
 
