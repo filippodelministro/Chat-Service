@@ -8,6 +8,7 @@
 //each device has a socket to the server
 // int srv_socket_udp;
 // struct sockaddr_in srv_addr_udp;
+int srv_port;
 int srv_socket_tcp;
 struct sockaddr_in srv_addr_tcp; 
 
@@ -15,9 +16,10 @@ struct sockaddr_in srv_addr_tcp;
 //-----------     DEVICE    -----------------
 int my_port;
 bool connected = false;
+bool registred = false;
 struct sockaddr_in my_addr;
 
-// //each device has a port and a socket descriptor
+//each device has a port and a socket descriptor
 struct device{
     int port;           // port number       
     int sd;             // TCP socket
@@ -130,32 +132,78 @@ void help_command()
 //to do         ???
 void signup_command(){
 
+    int lenght;
+    char port[1024];
     char username[1024];
     char password[1024];
     char buffer[BUFFER_SIZE];
 
-    //create socket to communicate with serveer
-    create_srv_socket_tcp(my_port);
+    printf("[device] send opcode to server...\n");
+    send_opcode_recv_ack(IN_OPCODE);
+    printf("[device] in_command: Received acknoledge!\n"
+            "Insert <srv_port> <username> and <password> to continue\n"
+    );
 
-    ////send opcode to server and wait for ACK
-    printf("[device] signup_command: send opcode to server...\n");
-    send_opcode_recv_ack(SIGNUP_OPCODE);
-    printf("[device] signup_command: Received acknoledge!\n"
-            "Insert username and password to continue\n"
-        );
 
-    //get username and password from stdin
+    //get data from stdin
     scanf("%s", username);
     scanf("%s", password);
 
-    //da levare
-    printf("[device] signup_command: got your usr and pswd\n");    
-    printf("[device] signup_command: username: %s \n", username);
-    printf("[device] signup_command: password: %s \n", password);
-    
-    
-    //send usrn and pswd to server and wait for ACK
-    
+
+    //prompt confermation message                   //maybe to remove
+    printf("[device] in_command: got your data! \n"
+        "\t username: %s \n"
+        "\t password: %s\n",
+        username, password
+    );
+
+    //check if 
+
+    //create socket to communicate with server
+    // create_srv_socket_tcp(srv_port);     ???
+
+    //complete: device is now online
+    registred = true;
+    printf("[device] You are now registred!\n"); 
+   
+}
+
+void in_command(){
+
+    int lenght;
+    char port[1024];
+    char username[1024];
+    char password[1024];
+    char buffer[BUFFER_SIZE];
+
+    printf("[device] send opcode to server...\n");
+    send_opcode_recv_ack(IN_OPCODE);
+    printf("[device] in_command: Received acknoledge!\n"
+            "Insert <srv_port> <username> and <password> to continue\n"
+    );
+
+
+    //get data from stdin
+    scanf("%s", port);
+    srv_port = atoi(port);
+    scanf("%s", username);
+    scanf("%s", password);
+
+
+    //prompt confermation message                   //maybe to remove
+    printf("[device] in_command: got your data! \n"
+        "\t srv_port: %d \n"
+        "\t username: %s \n"
+        "\t password: %s\n",
+        srv_port, username, password
+    );
+
+    //check if 
+
+    //create socket to communicate with server
+    create_srv_socket_tcp(srv_port);
+
+
 
     //complete: device is now online
     connected = true;
@@ -164,17 +212,6 @@ void signup_command(){
     // to do ??? to speak witch other deiveces
     // create_dev_socket_tcp();
 
-}
-
-void in_command(){
-
-    char buffer[BUFFER_SIZE];
-
-    printf("Send opcode to server...\n");
-    send_opcode_recv_ack(IN_OPCODE);
-    printf("Received acknoledge!\n");
-
-    connected = true;
 }
 
 void hanging_command(){

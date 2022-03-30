@@ -183,23 +183,33 @@ void handle_request(){
         exit(-1);
     }
     
-    if(pid == 0){
-        //son process
+    if(pid == 0){   //son process
         switch (opcode){
-        case 0:
-            //signup
+        case 0:                                                     //signup command
+                                                                    
             printf("\n[server] handle_request: Received connection request\n");
             send(new_dev, buffer, strlen(buffer), 0);           //send ACK
             printf("[server] handle_request: ACK sent!\n");
 
             break;
 
-        case 1:
-            // send_ack();
+        case 1:                                                     //in command
+                                                                                                                                        
+            //first handshake
             printf("Received connection request\n");
             send(listening_socket, buffer, strlen(buffer), 0);
+            printf("[server] handle_request: ACK sent!\n");
+            
+            //receive device data
+            
+            
+            
+            //add device to device list
+
+            
 
             break;
+
         default:
             break;
         }
