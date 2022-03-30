@@ -13,6 +13,10 @@ struct sockaddr_in my_addr;
 struct device{
     int port;           // port number       
     int sd;             // TCP socket
+    bool conncted;
+    char* username;
+    char* password;
+    // time_t
 }devices[MAX_DEVICES];  //devices array
 
 
@@ -65,7 +69,6 @@ void prompt()
     fflush(stdout);
 }    
 
-void help_command();
 
 void boot_message(){
     printf("**********************SERVER STARTED**********************\n");
@@ -111,6 +114,8 @@ void fdt_init(){
 	FD_SET(0, &master);
 	
 	fdmax = 0;
+
+    printf("[server] fdt_init: set init done!\n");
 }
 
 void create_tcp_socket(char* port){
@@ -124,8 +129,8 @@ void create_tcp_socket(char* port){
     //create address
     memset(&my_addr, 0, sizeof(my_addr));
     my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
     my_addr.sin_port = htons(atoi(port));
+    my_addr.sin_addr.s_addr = INADDR_ANY;
 
     //linking address
     if(bind(listening_socket, (struct sockaddr*)&my_addr, sizeof(my_addr)) == -1){
@@ -133,6 +138,9 @@ void create_tcp_socket(char* port){
         exit(-1);
     }
 
+    listen(listening_socket, MAX_DEVICES);
+
+    printf("[server] create_tcp_socket: waiting for connection...\n");
 }
 
 
@@ -141,6 +149,73 @@ void create_tcp_socket(char* port){
 //processo figlio con uno switch case
 void handle_request(){
 
+    //connecting device
+    int new_dev;
+    struct sockaddr_in new_addr;
+    socklen_t addrlen = sizeof(new_addr);
+
+    char buffer[BUFFER_SIZE];
+    int ret;
+    pid_t pid;
+
+    //tell which command to do
+    uint16_t opcode;
+
+    //accept new connection    
+    new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
+
+    while(
+        //waiting for request
+        (ret = recv(new_dev, buffer, BUFFER_SIZE, 0)) != 0
+    )
+    /*if(ret < 0)
+        return;*/
+
+    //get opcode
+	memcpy(&opcode, (uint16_t *) &buffer, 2);
+    opcode = ntohs(opcode);
+
+    printf("[server] handle_request: received opcode: "
+            "%d", opcode, "\n");
+    // printf("%d", opcode, "\n");
+
+    /*
+    //managed by a son process
+    pid = fork();
+    if(pid < 0){
+        printf("[server] error fork()\n");
+        exit(-1);
+    }
+    */
+
+    // if(pid == 0){
+        //son process
+        switch (opcode){
+        case 0:
+            //signup
+            
+            // send_ack();
+
+            printf("\n[server] handle_request: Received connection request\n");
+            send(new_dev, buffer, strlen(buffer), 0);
+            printf("[server] handle_request: ACK sent!\n");
+            
+            break;
+
+        case 1:
+            // send_ack();
+            printf("Received connection request\n");
+            send(listening_socket, buffer, strlen(buffer), 0);
+
+            break;
+        default:
+            break;
+        }
+    // }
+    // else{
+        //father process
+
+    // }
 }
 
 
@@ -160,7 +235,6 @@ int main(int argc, char** argv){
 	
     //Initialise set structure 
 	fdt_init();
-
 
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
@@ -186,11 +260,11 @@ int main(int argc, char** argv){
             if(FD_ISSET(i, &read_fds)){
 
                 //keyboard                     (1)
-                if(i == 0)                  
-                    read_command();
+                if(i == 0)                      
+                    read_command();     
 
                 //deveices request             (2)
-                if(i == listening_socket)   
+                if(i == listening_socket)  
                     handle_request();
             }	
         }

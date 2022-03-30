@@ -15,3 +15,10 @@
 
 #define MAX_DEVICES         100    
 
+#define SIGNUP_OPCODE       0
+#define IN_OPCODE           1
+#define HANGING_OPCODE      2
+#define SHOW_OPCODE         3
+#define CHAT_OPCODE         4
+#define SHARE_OPCODE        5
+#define OUT_OPCODE          6

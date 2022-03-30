@@ -35,7 +35,61 @@ fd_set master;          //main set: managed with macro
 fd_set read_fds;        //read set: managed from select() 
 int fdmax;
 
+//Function called by the server so manage socket and interaction with devices
+//////////////////////////////////////////////////////////////////////////
+///                             FUNCTION                               ///
+//////////////////////////////////////////////////////////////////////////
 
+void fdt_init(){
+    FD_ZERO(&master);
+	FD_ZERO(&read_fds);
+    // FD_ZERO(&write_fds);
+	FD_SET(0, &master);
+	
+	fdmax = 0;
+
+    printf("[device] fdt_init: set init done...\n");
+}
+
+void create_srv_socket_tcp(int p){
+
+    printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
+
+    //create
+    if((srv_socket_tcp = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("[device] socket() error");
+        exit(-1);
+    }
+
+    //address
+    memset(&srv_addr_tcp, 0, sizeof(srv_addr_tcp));
+    srv_addr_tcp.sin_family = AF_INET;
+    srv_addr_tcp.sin_port = htons(p);
+    // srv_addr_tcp.sin_addr.s_addr = INADDR_ANY;
+    inet_pton(AF_INET, "127.0.0.1", &srv_addr_tcp.sin_addr);
+
+    if(connect(srv_socket_tcp, (struct sockaddr*)&srv_addr_tcp, sizeof(srv_addr_tcp)) == -1){
+        perror("[device]: error connect(): ");
+        exit(-1);
+    }
+
+    printf("[device] create_srv_tcp_socket: waiting for connection...\n");
+}
+
+void send_opcode_recv_ack(int o){
+
+    //copy opcode to buffer and send to server
+    char buffer[BUFFER_SIZE];
+
+    //send opcode to server
+    uint16_t opcode = htons(o);
+    memset(buffer, opcode, 2);
+    send(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
+
+    //receive akc to proceed
+    // while(recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0) < 0);
+    recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
+}
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
 ///                              COMMAND                               ///
@@ -45,23 +99,41 @@ int fdmax;
 void help_command()
 {
 	printf( "Type a command:\n"
-            "1) hanging                             --> receive old msg\n"
-            "2) show                                --> ??\n"
-            "3) chat                                --> ??\n"
-            "4) share                               --> ??\n"
-            "5) out                                 --> ??\n"
+            "1) hanging   --> receive old msg\n"
+            "2) show      --> ??\n"
+            "3) chat      --> ??\n"
+            "4) share     --> ??\n"
+            "5) out       --> ??\n"
     );
 }
 
 //to do         ???
 void signup_command(){
+
+    char buffer[BUFFER_SIZE];
+
+    create_srv_socket_tcp(my_port);
+
+    printf("[device] signup_command: send opcode to server...\n");
+    send_opcode_recv_ack(SIGNUP_OPCODE);
+    printf("[device] signup_command: Received acknoledge!\n");
+
     connected = true;
-    printf("COMANDO SIGNUP ESEGUITO \n");
+
+    // to do ??? to speak witch other deiveces
+    // create_dev_socket_tcp();
+
 }
 
 void in_command(){
+
+    char buffer[BUFFER_SIZE];
+
+    printf("Send opcode to server...\n");
+    send_opcode_recv_ack(IN_OPCODE);
+    printf("Received acknoledge!\n");
+
     connected = true;
-    printf("COMANDO IN ESEGUITO \n");
 }
 
 void hanging_command(){
@@ -119,7 +191,7 @@ void read_command(){
         if(!connected)
             signup_command();
         else{
-            printf("device already connected! Try one of below:\n");
+            printf("Device already connected! Try one of below:\n");
             help_command();
         }
     }
@@ -144,48 +216,16 @@ void read_command(){
 
     //command is not valid; ask to help_command and show available command
 	else{
-		fprintf(stderr, "Not valid command. Want help? Y/N\n");
+		/*
+        fprintf(stderr, "Not valid command. Want help? Y/N\n");
         int c = scanf("%1s", cmd);
         if(c == 'Y' || 'y'){
+        */
+        printf("Command is not valid!\n");
             if(connected) help_command();
             else boot_message();
-        }
+        // }
     }						
-}
-
-//Function called by the server so manage socket and interaction with devices
-//////////////////////////////////////////////////////////////////////////
-///                             FUNCTION                               ///
-//////////////////////////////////////////////////////////////////////////
-
-void fdt_init(){
-    FD_ZERO(&master);
-	FD_ZERO(&read_fds);
-    // FD_ZERO(&write_fds);
-	FD_SET(0, &master);
-	
-	fdmax = 0;
-}
-
-void create_srv_socket_tcp(char* p){
-
-    //create
-    if((srv_socket_tcp = socket(AF_INET, SOCK_STREAM, 0)) == -1){
-        perror("socket() error");
-        exit(-1);
-    }
-
-    //address
-    memset(&srv_addr_tcp, 0, sizeof(srv_addr_tcp));
-    srv_addr_tcp.sin_family = AF_INET;
-    srv_addr_tcp.sin_port = htons(atoi(p));
-    srv_addr_tcp.sin_addr.s_addr = INADDR_ANY;
-    // inet_pton(AF_INET, "127.0.0.1", &srv_addr_tcp.sin_addr);
-
-    if(connect(srv_socket_tcp, (struct sockaddr*)&srv_addr_tcp, sizeof(srv_addr_tcp)) == -1){
-        perror("[client]: ERROR CONNECT: ");
-        exit(-1);
-    }
 }
 
 
@@ -209,11 +249,10 @@ int main(int argc, char* argv[]){
    //Initialise set structure 
 	fdt_init();
 
-    /*
+    
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
-    */
-
+    
     //prompt boot message
     boot_message();
     prompt();
