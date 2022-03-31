@@ -4,13 +4,16 @@
 ///                             DECLARATION                            ///
 //////////////////////////////////////////////////////////////////////////
 
-//-----------     SERVER    -----------------
 //each device has a socket to the server
+//-----------     SERVER    -----------------
 // int srv_socket_udp;
 // struct sockaddr_in srv_addr_udp;
+
+/*
 int srv_port;
 int srv_socket_tcp;
 struct sockaddr_in srv_addr_tcp; 
+*/
 
 
 //-----------     DEVICE    -----------------
@@ -21,9 +24,13 @@ struct sockaddr_in my_addr;
 
 //each device has a port and a socket descriptor
 struct device{
-    int port;           // port number       
-    int sd;             // TCP socket
+    int port;                   // port number       
+    int sd;                     // TCP socket
+    struct sockaddr_in sd_addr;  
 }devices[MAX_DEVICES];  //devices array
+
+//server considered as a device
+struct device server;
 
 // //each device socket has an address
 // struct sockaddr_in dev_addr[MAX_DEVICES];   //device address
@@ -52,8 +59,8 @@ void prompt(){
 void boot_message(){
     printf("**********************PEER %d**********************\n", my_port);
     printf( "Create an account or login to continue:\n"
-                "1) signup <username> <password>        --> create account\n"
-                "2) in <srv_port> <username> <password> --> connect to server\n"
+                "1) signup  <srv_port> <username> <password>    --> create account\n"
+                "2) in      <srv_port> <username> <password>    --> connect to server\n"
     );
 }
 
@@ -73,9 +80,42 @@ void fdt_init(){
     printf("[device] fdt_init: set init done...\n");
 }
 
+
+
 void create_srv_socket_tcp(int p){
 
     printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
+
+    server.port = p;
+
+    //create
+    if((server.sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("[device] socket() error");
+        exit(-1);
+    }
+
+    //address
+    memset(&server.sd_addr, 0, sizeof(server.sd_addr));
+    server.sd_addr.sin_family = AF_INET;
+    server.sd_addr.sin_port = htons(p);
+    // srv_addr_tcp.sin_addr.s_addr = INADDR_ANY;
+    inet_pton(AF_INET, "127.0.0.1", &server.sd_addr.sin_addr);
+
+    if(connect(server.sd, (struct sockaddr*)&server.sd_addr, sizeof(server.sd_addr)) == -1){
+        perror("[device]: error connect(): ");
+        exit(-1);
+    }
+
+    printf("[device] create_srv_tcp_socket: waiting for connection...\n");
+}
+
+/*
+void create_srv_socket_tcp(int p){
+
+    printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
+
+    server.port = p;
+    server.sd
 
     //create
     if((srv_socket_tcp = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -97,6 +137,7 @@ void create_srv_socket_tcp(int p){
 
     printf("[device] create_srv_tcp_socket: waiting for connection...\n");
 }
+*/
 
 void send_opcode_recv_ack(int o){
 
@@ -106,12 +147,15 @@ void send_opcode_recv_ack(int o){
     //send opcode to server
     uint16_t opcode = htons(o);
     memset(buffer, opcode, 2);
-    send(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
+    send(server.sd, buffer, BUFFER_SIZE, 0);
 
     //receive akc to proceed
     // while(recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0) < 0);
     recv(listening_socket, buffer, BUFFER_SIZE, 0);
 }
+
+
+
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
 ///                              COMMAND                               ///
@@ -138,34 +182,41 @@ void signup_command(){
     char password[1024];
     char buffer[BUFFER_SIZE];
 
-    printf("[device] send opcode to server...\n");
-    send_opcode_recv_ack(IN_OPCODE);
-    printf("[device] in_command: Received acknoledge!\n"
-            "Insert <srv_port> <username> and <password> to continue\n"
-    );
-
-
     //get data from stdin
+    printf("[device] signup_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
+    scanf("%s", port);
+    server.port = atoi(port);
     scanf("%s", username);
     scanf("%s", password);
 
-
     //prompt confermation message                   //maybe to remove
-    printf("[device] in_command: got your data! \n"
+    printf("[device] signup_command: got your data! \n"
+        "\t srv_port: %d \n"
         "\t username: %s \n"
         "\t password: %s\n",
-        username, password
+        server.port, username, password
     );
 
-    //check if 
-
     //create socket to communicate with server
-    // create_srv_socket_tcp(srv_port);     ???
+    create_srv_socket_tcp(server.port);
 
+    //send opcode to server and wait for ack
+    printf("[device] signup_command: send opcode to server...\n");
+    send_opcode_recv_ack(SIGNUP_OPCODE);
+    printf("[device] signup_command: Received acknoledge!\n");
+
+    //send info to server and wait for ack
+    // send_lenght();
+    // send_message();
+
+
+    //if OK
     //complete: device is now online
     registred = true;
     printf("[device] You are now registred!\n"); 
    
+   //if NOT OK
+//    printf("[device] signup_command: Account already exists!\n");
 }
 
 void in_command(){
@@ -176,34 +227,33 @@ void in_command(){
     char password[1024];
     char buffer[BUFFER_SIZE];
 
-    printf("[device] send opcode to server...\n");
-    send_opcode_recv_ack(IN_OPCODE);
-    printf("[device] in_command: Received acknoledge!\n"
-            "Insert <srv_port> <username> and <password> to continue\n"
-    );
-
-
     //get data from stdin
+     //get data from stdin
+    printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
     scanf("%s", port);
-    srv_port = atoi(port);
+    server.port = atoi(port);
     scanf("%s", username);
     scanf("%s", password);
-
 
     //prompt confermation message                   //maybe to remove
     printf("[device] in_command: got your data! \n"
         "\t srv_port: %d \n"
         "\t username: %s \n"
         "\t password: %s\n",
-        srv_port, username, password
+        server.port, username, password
     );
+
+    //send opcode to server and wait for ack
+    printf("[device] send opcode to server...\n");
+    send_opcode_recv_ack(IN_OPCODE);
+    printf("[device] in_command: Received acknoledge!\n");
 
     //check if 
 
     //create socket to communicate with server
-    create_srv_socket_tcp(srv_port);
+    // create_srv_socket_tcp(srv_port);
 
-
+    // send(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
 
     //complete: device is now online
     connected = true;
@@ -247,8 +297,13 @@ void read_command(){
 
     //signup and in allowed only if not connected
     //other command allowed only if connected
-    
-    if(!strncmp(cmd, "signup", 6)){
+    if(!strncmp(cmd, "help", 4)){
+        if(connected)
+            help_command();
+        else
+            boot_message();
+    }
+    else if(!strncmp(cmd, "signup", 6)){
         if(!connected)
             signup_command();
         else{
@@ -309,7 +364,6 @@ int main(int argc, char* argv[]){
 
    //Initialise set structure 
 	fdt_init();
-
     
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
@@ -342,7 +396,7 @@ int main(int argc, char* argv[]){
                     printf("[server]> Connection request");
                 }
                 
-                else if(i == srv_socket_tcp){
+                else if(i == server.sd){
                     //connection request by server
                 }
 

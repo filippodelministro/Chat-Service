@@ -69,15 +69,12 @@ void prompt()
     fflush(stdout);
 }    
 
-
 void boot_message(){
     printf("**********************SERVER STARTED**********************\n");
     help_command();
 }
 
-//to do         ???
-//legge da tatstiera il comando e lo fa gestire da un figlio
-//con uno switch case
+//read command from stdin
 void read_command(){
     
     char cmd[COMMAND_LENGHT];
@@ -100,7 +97,7 @@ void read_command(){
     prompt();
 }
 
-
+//to do         ???
 
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
@@ -164,17 +161,18 @@ void handle_request(){
     //accept new connection    
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
 
+    
     //receive opcode from client
     if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
+    
    
     //get opcode (transform to use)
 	memcpy(&opcode, (uint16_t *) &buffer, 2);
     opcode = ntohs(opcode);
-    printf("[server] handle_request: received opcode: "
-            "%d", opcode, "\n");
+    printf("[server] handle_request: received opcode: ""%d", opcode, "\n");
     
     //let a child process to manage  
     pid = fork();
@@ -186,23 +184,29 @@ void handle_request(){
     if(pid == 0){   //son process
         switch (opcode){
         case 0:                                                     //signup command
-                                                                    
+
             printf("\n[server] handle_request: Received connection request\n");
             send(new_dev, buffer, strlen(buffer), 0);           //send ACK
             printf("[server] handle_request: ACK sent!\n");
+            prompt();
+
+            //recevive username and password
+
 
             break;
 
         case 1:                                                     //in command
                                                                                                                                         
             //first handshake
-            printf("Received connection request\n");
-            send(listening_socket, buffer, strlen(buffer), 0);
+            printf("\n[server] handle_request: Received connection request\n");
+            send(new_dev, buffer, strlen(buffer), 0);
             printf("[server] handle_request: ACK sent!\n");
             
             //receive device data
-            
-            
+            // recv(new_dev, buffer, BUFFER_SIZE, 0);
+
+            // printf("%s\n", buffer);
+           
             
             //add device to device list
 
