@@ -22,3 +22,5 @@
 #define CHAT_OPCODE         4
 #define SHARE_OPCODE        5
 #define OUT_OPCODE          6
+
+#define DELIMITER           "///"

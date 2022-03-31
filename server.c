@@ -13,12 +13,13 @@ struct sockaddr_in my_addr;
 struct device{
     int port;           // port number       
     int sd;             // TCP socket
-    bool conncted;
+    bool connected;
     char* username;
     char* password;
     // time_t
 }devices[MAX_DEVICES];  //devices array
 
+int n_dev = 0;                  //number of devices
 
 //-----------     SET    -----------------
 int listening_socket;    //socket listener (get connect/service request)
@@ -50,7 +51,11 @@ void help_command(){
 
 //to do         ???
 void list_command(){
-    printf("LIST COMMAND ESEGUITO\n");
+    int i;
+    for(i=0; i<n_dev; i++){
+        printf("LIST COMMAND ESEGUITO\n");
+    }
+
 }
 
 void esc_command(){
@@ -104,6 +109,25 @@ void read_command(){
 ///                             FUNCTION                               ///
 //////////////////////////////////////////////////////////////////////////
 
+//add deviceto devices list: return dev_id or -1 if not possible to add
+int add_dev(int sd, struct sockaddr_in addr, char* usr, char* pswd){
+    if(n_dev >= MAX_DEVICES)
+        return -1;
+
+    struct device* d = &devices[n_dev];
+    d->port = 0;    //???
+    d->sd = sd;
+    d->connected = false;
+    
+
+    //these strspy dont work in this way
+    // strcpy(d->username, usr);
+printf("QUI!\n");
+    // strcpy(d->password, pswd);
+
+    return n_dev++;
+}
+
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
@@ -140,7 +164,6 @@ void create_tcp_socket(char* port){
     printf("[server] create_tcp_socket: waiting for connection...\n");
 }
 
-
 //to do                 ???
 //prende opcode dal device (recv), poi lo fa gestire da un 
 //processo figlio con uno switch case
@@ -158,21 +181,24 @@ void handle_request(){
     //tell which command to do
     uint16_t opcode;
 
+    //for signup and in command
+    char username[1024];
+    char password[1024];
+    char* token;
+
     //accept new connection    
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-
     
     //receive opcode from client
     if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
-    
    
     //get opcode (transform to use)
 	memcpy(&opcode, (uint16_t *) &buffer, 2);
     opcode = ntohs(opcode);
-    printf("[server] handle_request: received opcode: ""%d", opcode, "\n");
+    printf("\n[server] handle_request: received opcode: ""%d", opcode, "\n");
     
     //let a child process to manage  
     pid = fork();
@@ -190,11 +216,21 @@ void handle_request(){
             printf("[server] handle_request: ACK sent!\n");
             prompt();
 
+            //to do: fix strcat at server       ???
             //recevive username and password
+            if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
+                perror("[server]: Error recv: \n");
+                exit(-1);
+            }
 
-
+            //add device to device list 
+            //port???
+            // printf("%s\n", buffer);
+            //print something to prove right recv
+            add_dev(new_dev, new_addr, username, password);
+            printf("add_dev DONE!!\n");            
+            
             break;
-
         case 1:                                                     //in command
                                                                                                                                         
             //first handshake
@@ -207,10 +243,8 @@ void handle_request(){
 
             // printf("%s\n", buffer);
            
-            
-            //add device to device list
+            //connect device
 
-            
 
             break;
 
@@ -275,4 +309,4 @@ int main(int argc, char** argv){
             }	
         }
     }
-}
+} 
