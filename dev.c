@@ -186,10 +186,11 @@ void signup_command(){
     send_opcode_recv_ack(SIGNUP_OPCODE);
     printf("[device] signup_command: Received acknoledge!\n");
 
-    //to do: fix strcat at server           ???
-    //send username and password to serve       
+    //send username and password to serve
     strcat(buffer, username);
+    strcat(buffer, DELIMITER);
     strcat(buffer, password);
+    // sprintf(buffer, username, DELIMITER, password/*, DELIMITER*/);   
     send(server.sd, buffer, strlen(buffer), 0);
 
     //if OK
@@ -210,7 +211,6 @@ void in_command(){
     char buffer[BUFFER_SIZE];
 
     //get data from stdin
-     //get data from stdin
     printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
     scanf("%s", port);
     server.port = atoi(port);
@@ -226,24 +226,23 @@ void in_command(){
     );
 
     //send opcode to server and wait for ack
-    printf("[device] send opcode to server...\n");
+    printf("[device] %d send opcode to server...\n", IN_OPCODE);
     send_opcode_recv_ack(IN_OPCODE);
     printf("[device] in_command: Received acknoledge!\n");
 
-    //check if 
-
-    //create socket to communicate with server
-    // create_srv_socket_tcp(srv_port);
-
-    // send(srv_socket_tcp, buffer, BUFFER_SIZE, 0);
+    /*
+    //send username and password to serve
+    strcat(buffer, username);
+    strcat(buffer, DELIMITER);
+    strcat(buffer, password);
+    // sprintf(buffer, username, DELIMITER, password, DELIMITER);   
+    send(server.sd, buffer, strlen(buffer), 0);
 
     //complete: device is now online
-    connected = true;
+    */
+ 
     printf("[device] You are now online!\n"); 
  
-    // to do ??? to speak witch other deiveces
-    // create_dev_socket_tcp();
-
 }
 
 void hanging_command(){

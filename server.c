@@ -56,7 +56,6 @@ void help_command(){
 void list_command(){
     int i;
 
-    //add timestamp here somewhere              ???
     printf("\n[server] list_command: %d devices registred>\n", n_dev);
     if(!n_conn){
         printf("\tThere are no devices connected!\n");
@@ -130,14 +129,14 @@ void read_command(){
 
 //handshake to get opcode; prompted in stdout
 void first_handshake(uid_t op, int sd, char* buf){
-    printf("\n[server] handle_request: received opcode: %d\n", op);
     send(sd, buf, strlen(buf), 0);           //send ACK
-    printf("[server] handle_request: ACK sent!\n");
+    printf("\n[server] first_handshake: received opcode: %d\n", op);
+    // printf("[server] handle_request: ACK sent!\n");
     prompt();
 }
 
 //add deviceto devices list: return dev_id or -1 if not possible to add
-int add_dev(int sd, struct sockaddr_in addr, char* usr, char* pswd){
+int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
     
     if(n_dev >= MAX_DEVICES)
         return -1;
@@ -153,19 +152,52 @@ int add_dev(int sd, struct sockaddr_in addr, char* usr, char* pswd){
     time(&rawtime);
     d->tv = localtime(&rawtime);
 
-    //these strcpy dont work in this way
-    // strncpy(d->username, usr, sizeof(usr));
-    // printf("QUI!\n");
+    //these strcpy dont work in this way        ???
+    // strcpy(d->username, usr);
+    // strcpy(d->password, pswd);
 
+    printf("[server] add_dev: added new device! \n"
+                    "\t dev_id: %d \n"
+                    "\t username: %s \n"
+                    "\t password: %s\n",
+                    n_dev, d->username, d->password
+    );
     return n_dev++;
+}
+
+
+//look for device from the sd socket 
+int find_device_from_socket(int sd){
+    int i;
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(d->sd == sd)
+            return i;
+    }
+
+    return -1;      //not found
 }
 
 
 //check if login command is correct; if so connect device
 bool check_and_connect(int sd, char* usr, char* pswd){
     
+    int dev_id = find_device_from_socket(sd);
+    
+    if(dev_id == -1)
+        return false;
 
-
+    struct device* d = &devices[dev_id];
+    
+    if(!strcmp(d->username, usr) &&
+        !strcmp(d->password, pswd)){
+            d->connected = true;
+            n_conn++;
+    }
+    else{
+        printf("[server] check_and_connect: usern or pswd incorrect!\n");
+    }
 }
 
 void fdt_init(){
@@ -252,7 +284,6 @@ void handle_request(){
 
             first_handshake(opcode, new_dev, buffer);
 
-            //to do: fix strcat at server       ???
             //recevive username and password
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
                 perror("[server]: Error recv: \n");
@@ -262,29 +293,49 @@ void handle_request(){
             //add device to device list 
             //port???
             //print something to prove right recv
-            ret = add_dev(new_dev, new_addr, username, password);
-            struct device* d = &devices[ret];
+            
+            strcpy(username, strtok(buffer, DELIMITER));
+            strcpy(password, strtok(NULL, DELIMITER));
+            
+            
+            //Uncomment to show it works here: it doesnt works in add_dev
             printf("[server] handle_request: added new device! \n"
                     "\t dev_id: %d \n"
                     "\t username: %s \n"
                     "\t password: %s\n",
-                    ret, d->username, d->password
+                    ret, username, password
             );
+            
+            ret = add_dev(new_dev, new_addr, username, password);
+            
             prompt();
+
+            // DA CHIEDERE ???
+            // close(new_dev);
 
             break;
         case 1:                                                     //in command
-                                                                                                                                        
+
+            printf("ARRIVA QUI??\n");
+
             first_handshake(opcode, new_dev, buffer);
             
-            //receive device data
-            //recv(new_dev, buffer, BUFFER_SIZE, 0);
+            //recevive username and password
+            /*
+            if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
+                perror("[server]: Error recv: \n");
+                exit(-1);
+            }
 
-            // printf("%s\n", buffer);
+            //add device to device list 
+            strcpy(username, strtok(buffer, DELIMITER));
+            strcpy(password, strtok(NULL, DELIMITER));
            
             //connect device
-            ret = check_and_connect(new_dev, new_addr, username, password);
+            ret = check_and_connect(new_dev, username, password);
+            */
 
+            prompt();
 
             break;
 
@@ -309,7 +360,7 @@ int main(int argc, char** argv){
 		exit(-1);
     }
     
-    n_conn = n_dev = 0;
+    // n_conn = n_dev = 0;
 
     //create socket to get request
 	create_tcp_socket(argv[1]);
