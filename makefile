@@ -14,3 +14,8 @@ server: server.o
 # pulizia dei file della compilazione (eseguito con ‘make clean’ da terminale) 
 reset: 
 	rm *o dev server
+
+gdb:
+	gcc -g -Wall dev.o -o dev
+	gcc -g -Wall server.o -o server 
+ 
