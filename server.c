@@ -8,13 +8,13 @@
 int my_port;
 struct sockaddr_in my_addr;
 
-
 //-----------     DEVICES    -----------------
 struct device{
     int port;                   // port number       
     int sd;                     // TCP socket
     struct sockaddr_in addr;
     bool connected;
+
     struct tm* tv;          
     char* username;
     char* password;
@@ -149,7 +149,6 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
         return -1;
 
     struct device* d = &devices[n_dev];
-    d->port = 0;    //???
     d->sd = sd;
     d->addr = addr;
     d->connected = false;
@@ -159,9 +158,10 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
     time(&rawtime);
     d->tv = localtime(&rawtime);
 
-    //these strcpy dont work in this way        ???
-    // strcpy(d->username, usr);
-    // strcpy(d->password, pswd);
+    d->username = malloc(sizeof(usr));
+    d->password = malloc(sizeof(pswd));
+    strncpy(d->username, usr, sizeof(usr));
+    strncpy(d->password, pswd, sizeof(usr));
 
     printf("[server] add_dev: added new device! \n"
                     "\t dev_id: %d \n"
@@ -288,22 +288,10 @@ void handle_request(){
             }
 
             //add device to device list 
-            //port???
-            //print something to prove right recv
-            
             strcpy(username, strtok(buffer, DELIMITER));
             strcpy(password, strtok(NULL, DELIMITER));
-            
-            //Uncomment to show it works here: it doesnt works in add_dev
-            printf("[server] handle_request: added new device! \n"
-                    "\t dev_id: %d \n"
-                    "\t username: %s \n"
-                    "\t password: %s\n",
-                    ret, username, password
-            );
-            
             ret = add_dev(new_dev, new_addr, username, password);
-            
+
             prompt();
 
             close(new_dev);
@@ -327,6 +315,7 @@ void handle_request(){
             //connect device
             ret = check_and_connect(new_dev, username, password);
             
+
             prompt();
             break;
 

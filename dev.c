@@ -163,6 +163,7 @@ void signup_command(){
 
     //get data from stdin
     printf("[device] signup_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
+
     scanf("%s", port);
     server.port = atoi(port);
     scanf("%s", username);
@@ -186,6 +187,9 @@ void signup_command(){
     strcat(buffer, username);
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
+
+    printf("%s\n", buffer);
+
     send(server.sd, buffer, strlen(buffer), 0);
 
     //if OK
@@ -226,7 +230,9 @@ void in_command(){
     //send opcode to server and wait for ack
     send_opcode_recv_ack(IN_OPCODE);
 
-    //send username and password to serve
+    //send username and password to server; also send my_port
+    strcat(buffer, (void*)&my_port);
+    strcat(buffer, DELIMITER);
     strcat(buffer, username);
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
@@ -234,7 +240,6 @@ void in_command(){
 
     //complete: device is now online
     
- 
     printf("[device] You are now online!\n"); 
  
 }
