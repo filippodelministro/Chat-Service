@@ -100,14 +100,14 @@ void send_opcode_recv_ack(int op){
     char buffer[BUFFER_SIZE];
 
     //send opcode to server
-    printf("[device] signup_command: send opcode to server...\n");
+    printf("[device] send opcode to server...\n");
     uint16_t opcode = htons(op);
     send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
 
     //receive akc to proceed
     // while(recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0) < 0);
     recv(listening_socket, buffer, BUFFER_SIZE, 0);
-    printf("[device] signup_command: Received acknoledge!\n");
+    printf("[device] Received acknoledge!\n");
 }
 
 //to do???
@@ -183,13 +183,10 @@ void signup_command(){
     //send opcode to server and wait for ack
     send_opcode_recv_ack(SIGNUP_OPCODE);
 
-    //send username and password to serve
+    //send username and password to server
     strcat(buffer, username);
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
-
-    printf("%s\n", buffer);
-
     send(server.sd, buffer, strlen(buffer), 0);
 
     //if OK
@@ -236,19 +233,26 @@ void in_command(){
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
+	sleep(2);
 
     //send port to server
-    // printf("my_port: %d\n", my_port);
-    // uint16_t p = htons(my_port);
-    // send(server.sd, (void*)&p, sizeof(uint16_t), 0);
-
+    uint16_t p = htons(my_port);
+    send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+    
     //complete: device is now online
     printf("[device] You are now online!\n"); 
     memset(buffer, 0, sizeof(buffer));
+
 }
 
 void hanging_command(){
-    printf("COMANDO HANGING ESEGUITO \n");
+	char buffer[4096];
+
+	printf("Send Hello!\n");
+
+	memset(buffer, 0, sizeof(buffer));
+    strcpy(buffer, "Hello");
+    send(server.sd, (void*)buffer, sizeof(buffer), 0);
 }
 
 void show_command(){

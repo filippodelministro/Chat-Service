@@ -66,7 +66,7 @@ void list_command(){
 
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t#%d)\t%s\t\t%d:%d:%d\t%d\n",
+                printf("\t#%d)\t%s\t\t%d:%d:%d\t\t%d\n",
                     i, d->username, 
                     d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
                     d->port
@@ -186,7 +186,7 @@ int find_device_from_socket(int sd){
 }
 
 //check if login command is correct; if so connect device
-bool check_and_connect(int sd, char* usr, char* pswd){
+bool check_and_connect(int sd, int po, char* usr, char* pswd){
     
     int dev_id = find_device_from_socket(sd);
     
@@ -198,6 +198,7 @@ bool check_and_connect(int sd, char* usr, char* pswd){
     if(!strncmp(d->username, usr, sizeof(usr)) &&
         !strncmp(d->password, pswd, sizeof(pswd))){
             d->connected = true;
+            d->port = po;
             n_conn++;
 
         printf("[server] check_and_connect: find device! \n"
@@ -206,9 +207,11 @@ bool check_and_connect(int sd, char* usr, char* pswd){
                         "\t password: %s\n",
                         dev_id, d->username, d->password
         );
+        return true;
     }
     else{
         printf("[server] check_and_connect: usern or pswd incorrect!\n");
+        return false;
     }
 }
 
@@ -266,10 +269,9 @@ void handle_request(){
     uint16_t opcode;
 
     //for signup and in command
-    // int port;
+    int port;
     char username[1024];
     char password[1024];
-    // char* token;
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
@@ -304,25 +306,37 @@ void handle_request(){
             break;
         case 1:                                                     //in command
 
-            //recevive port, username and password
+            //recevive username and password
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
                 perror("[server]: Error recv: \n");
                 exit(-1);
             }
 
-            //add device to device list 
-            // strcpy(port, (void*)strtok(buffer, DELIMITER));
+            //split buffer in two string: username and password
             strcpy(username, strtok(buffer, DELIMITER));
             strcpy(password, strtok(NULL, DELIMITER));
-           
-            //connect device
-            ret = check_and_connect(new_dev, username, password);
-            
+            // printf("username: %s\npassword: %s\n\n", username, password);
+            sleep(2);
+
+            //receive port
+            uint16_t p;
+            if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
+                perror("[server]: Error recv: \n");
+                exit(-1);
+            }
+            port = ntohs(p);
+  
+            //add device to list and connect          
+            ret = check_and_connect(new_dev, port, username, password);
             prompt();
             break;
 
         case 2:
             printf("HANGING BRANCH!\n");
+
+            recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
+            printf("%s\n", buffer);
+
             break;
 
         case 3:
