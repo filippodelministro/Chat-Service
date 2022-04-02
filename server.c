@@ -128,11 +128,18 @@ void read_command(){
 //////////////////////////////////////////////////////////////////////////
 
 //handshake to get opcode; prompted in stdout
-void first_handshake(uid_t op, int sd, char* buf){
+uint16_t recv_opcode_send_ack(int sd, char* buf){
+    uint16_t op;
+
+    if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
+        perror("[server]: Error recv: \n");
+        exit(-1);
+    }
+    op = ntohs(op);
+
     send(sd, buf, strlen(buf), 0);           //send ACK
-    printf("\n[server] first_handshake: received opcode: %d\n", op);
-    // printf("[server] handle_request: ACK sent!\n");
-    prompt();
+    printf("\n[server] revc_opcode_send_ack: received opcode: %d\n", op);
+    return op;
 }
 
 //add deviceto devices list: return dev_id or -1 if not possible to add
@@ -256,21 +263,12 @@ void handle_request(){
     //for signup and in command
     char username[1024];
     char password[1024];
-    char* token;
+    // char* token;
 
-    //accept new connection    
+    //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    
-    //receive opcode from client
-    if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
-        perror("[server]: Error recv: \n");
-        exit(-1);
-    }
-   
-    //get opcode (transform to use)
-	memcpy(&opcode, (uint16_t *) &buffer, 2);
-    opcode = ntohs(opcode);
-    
+    opcode = recv_opcode_send_ack(new_dev, buffer);
+
     //let a child process to manage  
     pid = fork();
     if(pid < 0){
@@ -281,8 +279,7 @@ void handle_request(){
     if(pid == 0){   //son process
         switch (opcode){
         case 0:                                                     //signup command
-
-            first_handshake(opcode, new_dev, buffer);
+            printf("SIGNUP BRANCH!\n");
 
             //recevive username and password
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -297,7 +294,6 @@ void handle_request(){
             strcpy(username, strtok(buffer, DELIMITER));
             strcpy(password, strtok(NULL, DELIMITER));
             
-            
             //Uncomment to show it works here: it doesnt works in add_dev
             printf("[server] handle_request: added new device! \n"
                     "\t dev_id: %d \n"
@@ -310,18 +306,15 @@ void handle_request(){
             
             prompt();
 
-            // DA CHIEDERE ???
-            // close(new_dev);
+            close(new_dev);
 
             break;
         case 1:                                                     //in command
 
-            printf("ARRIVA QUI??\n");
+            printf("IN BRANCH!\n");
 
-            first_handshake(opcode, new_dev, buffer);
-            
             //recevive username and password
-            /*
+            
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
                 perror("[server]: Error recv: \n");
                 exit(-1);
@@ -333,13 +326,33 @@ void handle_request(){
            
             //connect device
             ret = check_and_connect(new_dev, username, password);
-            */
-
+            
             prompt();
-
             break;
 
+        case 2:
+            printf("HANGING BRANCH!\n");
+            break;
+
+        case 3:
+            printf("SHOW BRANCH!\n");
+            break;
+
+        case 4:
+            printf("CHAT BRANCH!\n");
+            break;
+
+        case 5:
+            printf("SHARE BRANCH!\n");
+            break;
+
+        case 6:
+            printf("OUT BRANCH!\n");
+            break;
+
+
         default:
+            printf("[server] halde_request: opcode is not valid!\n");
             break;
         }
     }
