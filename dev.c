@@ -200,20 +200,21 @@ void signup_command(){
     //if NOT OK
     //printf("[device] signup_command: Account already exists!\n");
 
+    memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
 void in_command(){
 
-    char port[1024];
+    char srv_port[1024];
     char username[1024];
     char password[1024];
     char buffer[BUFFER_SIZE];
 
     //get data from stdin
     printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
-    scanf("%s", port);
-    server.port = atoi(port);
+    scanf("%s", srv_port);
+    server.port = atoi(srv_port);
     scanf("%s", username);
     scanf("%s", password);
 
@@ -230,18 +231,20 @@ void in_command(){
     //send opcode to server and wait for ack
     send_opcode_recv_ack(IN_OPCODE);
 
-    //send username and password to server; also send my_port
-    strcat(buffer, (void*)&my_port);
-    strcat(buffer, DELIMITER);
+    //send username and password to server
     strcat(buffer, username);
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
+    //send port to server
+    // printf("my_port: %d\n", my_port);
+    // uint16_t p = htons(my_port);
+    // send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+
     //complete: device is now online
-    
     printf("[device] You are now online!\n"); 
- 
+    memset(buffer, 0, sizeof(buffer));
 }
 
 void hanging_command(){

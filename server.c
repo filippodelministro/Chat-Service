@@ -172,7 +172,6 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
     return n_dev++;
 }
 
-
 //look for device from the sd socket 
 int find_device_from_socket(int sd){
     int i;
@@ -186,7 +185,6 @@ int find_device_from_socket(int sd){
     return -1;      //not found
 }
 
-
 //check if login command is correct; if so connect device
 bool check_and_connect(int sd, char* usr, char* pswd){
     
@@ -196,11 +194,18 @@ bool check_and_connect(int sd, char* usr, char* pswd){
         return false;
 
     struct device* d = &devices[dev_id];
-    
-    if(!strcmp(d->username, usr) &&
-        !strcmp(d->password, pswd)){
+       
+    if(!strncmp(d->username, usr, sizeof(usr)) &&
+        !strncmp(d->password, pswd, sizeof(pswd))){
             d->connected = true;
             n_conn++;
+
+        printf("[server] check_and_connect: find device! \n"
+                        "\t dev_id: %d \n"
+                        "\t username: %s \n"
+                        "\t password: %s\n",
+                        dev_id, d->username, d->password
+        );
     }
     else{
         printf("[server] check_and_connect: usern or pswd incorrect!\n");
@@ -261,6 +266,7 @@ void handle_request(){
     uint16_t opcode;
 
     //for signup and in command
+    // int port;
     char username[1024];
     char password[1024];
     // char* token;
@@ -279,7 +285,6 @@ void handle_request(){
     if(pid == 0){   //son process
         switch (opcode){
         case 0:                                                     //signup command
-            printf("SIGNUP BRANCH!\n");
 
             //recevive username and password
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -290,32 +295,29 @@ void handle_request(){
             //add device to device list 
             strcpy(username, strtok(buffer, DELIMITER));
             strcpy(password, strtok(NULL, DELIMITER));
+            printf("username: %s\npassword: %s\n", username, password);
             ret = add_dev(new_dev, new_addr, username, password);
 
             prompt();
 
             close(new_dev);
-
             break;
         case 1:                                                     //in command
 
-            printf("IN BRANCH!\n");
-
-            //recevive username and password
-            
+            //recevive port, username and password
             if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
                 perror("[server]: Error recv: \n");
                 exit(-1);
             }
 
             //add device to device list 
+            // strcpy(port, (void*)strtok(buffer, DELIMITER));
             strcpy(username, strtok(buffer, DELIMITER));
             strcpy(password, strtok(NULL, DELIMITER));
            
             //connect device
             ret = check_and_connect(new_dev, username, password);
             
-
             prompt();
             break;
 
