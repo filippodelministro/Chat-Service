@@ -105,11 +105,14 @@ void send_opcode_recv_ack(int op){
     send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
 
     //receive akc to proceed
-    // while(recv(srv_socket_tcp, buffer, BUFFER_SIZE, 0) < 0);
     recv(listening_socket, buffer, BUFFER_SIZE, 0);
     printf("[device] Received acknoledge!\n");
 }
 
+void send_port_to_srv(int port){
+    uint16_t p = htons(port);
+    send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+}
 //to do???
 
 //send a int to a device 
@@ -233,9 +236,10 @@ void in_command(){
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
-	sleep(2);
+	sleep(1);
 
     //send port to server
+    // send_port_to_srv(my_port);
     uint16_t p = htons(my_port);
     send(server.sd, (void*)&p, sizeof(uint16_t), 0);
 
@@ -270,6 +274,7 @@ void show_command(){
 }
 
 void chat_command(){
+    send_opcode_recv_ack(CHAT_OPCODE);
     printf("COMANDO CHAT ESEGUITO \n");
 }
 
@@ -279,11 +284,21 @@ void share_command(){
 
 void out_command(){
     char buffer[BUFFER_SIZE];
-    send_opcode_recv_ack(OUT_OPCODE);
 
+    create_srv_socket_tcp(server.port);
+    
+    send_opcode_recv_ack(OUT_OPCODE);
+    sleep(1);
+
+    // send_port_to_srv(my_port);
+    uint16_t p = htons(my_port);
+    send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+
+    
     recv(server.sd, buffer, BUFFER_SIZE, 0);
     printf("%s\n", buffer);
     connected = false;
+    
     printf("[device] You are now offline!\n");
 
     close(server.sd);

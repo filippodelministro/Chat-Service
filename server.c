@@ -15,7 +15,7 @@ struct device{
     struct sockaddr_in addr;
     bool connected;
 
-    struct tm* tv;          
+    struct tm* tv;
     char* username;
     char* password;
     // time_t
@@ -44,30 +44,30 @@ void help_command(){
     );
 }
 
-//to do         ???
 void list_command(){
     int i;
 
-    printf("\n[server] list_command: %u devices registred>\n", n_dev);
+    printf("\n[server] list_command: %u devices registered>\n", n_dev);
     if(!n_conn){
         printf("\tThere are no devices connected!\n");
     }
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\n");
+    printf("\tdev_id\tusername\ttimestamp\tport\tsocket\n");
         for(i=0; i<n_dev; i++){
 
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t#%d)\t%s\t\t%d:%d:%d\t\t%d\n",
+                printf("\t#%d)\t%s\t\t%d:%d:%d\t\t%d\t%d\n",
                     i, d->username, 
                     d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
-                    d->port
+                    d->port, d->sd
                 );
             }
         }
     }
 }
 
+//to do         ???
 void esc_command(){
     printf("ESC COMMAND ESEGUITO\n");
 }
@@ -171,6 +171,34 @@ int find_device(const char* usr, const char* pswd){
     return -1;      //not found
 }
 
+int find_device_from_socket(int sd){
+    int i;
+
+    printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(d->sd == sd && d->connected)
+            return i;    
+    }
+
+    return -1;      //not found
+}
+
+int find_device_from_port(int port){
+    int i;
+
+    printf("[server] find_device_from_port: looking for port '%d'...\n", port);
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(d->port == port && d->connected)
+            return i;    
+    }
+
+    return -1;      //not found
+}
+
 //check if device is registred then connect device to network
 bool check_and_connect(int sd, int po, struct sockaddr_in addr, const char* usr, const char* pswd){
     
@@ -261,6 +289,7 @@ void handle_request(){
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     opcode = recv_opcode_send_ack(new_dev, buffer);
+    printf("opcode: %d\n", opcode);
 
     //semmai fare una fork() qui ???
     switch (opcode){
@@ -340,22 +369,34 @@ void handle_request(){
 
     case 6:
         printf("OUT BRANCH!\n");
+        
+        //receive port
+        if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
+        }
+        port = ntohs(p);
+        printf("port: %d", port);
 
-        //find device and disconnect from network
-        // // int id = find_device();
-        // if(id == -1){
-        //     printf("[sever] handle_request: device not found!\n");
-        //     break;
-        // }
+        // find device and disconnect from network
+        int id = find_device_from_port(port);
+        if(id == -1){
+            printf("[sever] handle_request: device not found!\n");
+            // break;
+        }
+        printf("id trovato: %d", id);
+        
+        struct device* d = &devices[id];
+        d->connected = false;
+        n_conn--;
 
-        // struct device* d = &devices[id];
-        // d->connected = false;
+        strcpy(buffer, "ACK");
+        send(new_dev, buffer, sizeof(buffer), 0);
+        list_command();
+        prompt();
+        close(new_dev);
 
-        // send(new_dev, "ACK", BUFFER_SIZE, 0);
-        // list_command();
-
-        // close(new_dev);
-        // break;
+        break;
 
     default:
         printf("[server] halde_request: opcode is not valid!\n");
