@@ -238,11 +238,21 @@ void in_command(){
     //send port to server
     uint16_t p = htons(my_port);
     send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+
+    // sleep(1);
+    //send addr to server
+    // struct sockaddr_in a = htons(my_addr);
+
+    // printf("my_addr: %d\n", my_addr);
+
+    // struct sockaddr_in a = my_addr;
+    // send(server.sd, (void*)&a, sizeof(struct sockaddr_in), 0);
     
     //complete: device is now online
-    printf("[device] You are now online!\n"); 
-    memset(buffer, 0, sizeof(buffer));
+    connected = true;
+    printf("[device] You are now online!\n");
 
+    memset(buffer, 0, sizeof(buffer));
 }
 
 void hanging_command(){
@@ -268,7 +278,15 @@ void share_command(){
 }
 
 void out_command(){
-    printf("COMANDO OUT ESEGUITO \n");
+    char buffer[BUFFER_SIZE];
+    send_opcode_recv_ack(OUT_OPCODE);
+
+    recv(server.sd, buffer, BUFFER_SIZE, 0);
+    printf("%s\n", buffer);
+    connected = false;
+    printf("[device] You are now offline!\n");
+
+    close(server.sd);
 }
 
 //command for routine services
@@ -316,15 +334,9 @@ void read_command(){
 
     //command is not valid; ask to help_command and show available command
 	else{
-		/*
-        fprintf(stderr, "Not valid command. Want help? Y/N\n");
-        int c = scanf("%1s", cmd);
-        if(c == 'Y' || 'y'){
-        */
         printf("Command is not valid!\n");
             if(connected) help_command();
             else boot_message();
-        // }
     }						
 }
 
@@ -382,6 +394,12 @@ int main(int argc, char* argv[]){
                 
                 else if(i == server.sd){
                     //connection request by server
+                    /*
+                    //list
+                    recv(server.sd, buffer, BUFFER_SIZE, 0);
+                    printf("%s\n", buffer);
+                    send(server.sd, buffer, sizeof(buffer), 0);
+                    */
                 }
 
                 //clear buffer and prompt

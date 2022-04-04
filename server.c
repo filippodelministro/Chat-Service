@@ -31,14 +31,6 @@ fd_set master;          //main set: managed with macro
 fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
-/*
-int i, sd, ret, len, new_sd;
-socklen_t addrlen;
-struct sockaddr_in cl_addr[MAX_DEVICES];    //array of socket
-
-char buffer[BUFFER_SIZE];
-*/
-
 //What a server user can use to interact with server
 //////////////////////////////////////////////////////////////////////////
 ///                              COMMAND                               ///
@@ -56,7 +48,7 @@ void help_command(){
 void list_command(){
     int i;
 
-    printf("\n[server] list_command: %d devices registred>\n", n_dev);
+    printf("\n[server] list_command: %u devices registred>\n", n_dev);
     if(!n_conn){
         printf("\tThere are no devices connected!\n");
     }
@@ -149,14 +141,6 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
         return -1;
 
     struct device* d = &devices[n_dev];
-    d->sd = sd;
-    d->addr = addr;
-    d->connected = false;
-
-    //handle timestamp
-    time_t rawtime;
-    time(&rawtime);
-    d->tv = localtime(&rawtime);
 
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
@@ -172,47 +156,48 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
     return n_dev++;
 }
 
-//look for device from the sd socket 
-int find_device_from_socket(int sd){
+//look for device from username and password
+int find_device(const char* usr, const char* pswd){
     int i;
+
+    printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
         
-        if(d->sd == sd)
-            return i;
+        if(!strcmp(d->username, usr) && !strcmp(d->password, pswd))
+            return i;    
     }
 
     return -1;      //not found
 }
 
-//check if login command is correct; if so connect device
-bool check_and_connect(int sd, int po, char* usr, char* pswd){
+//check if device is registred then connect device to network
+bool check_and_connect(int sd, int po, struct sockaddr_in addr, const char* usr, const char* pswd){
     
-    int dev_id = find_device_from_socket(sd);
-    
-    if(dev_id == -1)
+    int dev_id = find_device(usr, pswd);
+    if(dev_id == -1){
+        printf("[server] check_and_connect: device not found!\n");
         return false;
+    }
 
+    printf("[server] check_and_connect: found device %d \n", dev_id);
+    //if here device is found
     struct device* d = &devices[dev_id];
-       
-    if(!strncmp(d->username, usr, sizeof(usr)) &&
-        !strncmp(d->password, pswd, sizeof(pswd))){
-            d->connected = true;
-            d->port = po;
-            n_conn++;
+    d->sd = sd;
+    d->addr = addr;
+    d->port = po;
 
-        printf("[server] check_and_connect: find device! \n"
-                        "\t dev_id: %d \n"
-                        "\t username: %s \n"
-                        "\t password: %s\n",
-                        dev_id, d->username, d->password
-        );
-        return true;
-    }
-    else{
-        printf("[server] check_and_connect: usern or pswd incorrect!\n");
-        return false;
-    }
+    //handle timestamp
+    time_t rawtime;
+    time(&rawtime);
+    d->tv = localtime(&rawtime);
+    
+    d->connected = true;
+    n_conn++;
+
+    //show network info
+    list_command();
+    return true;
 }
 
 void fdt_init(){
@@ -277,92 +262,104 @@ void handle_request(){
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     opcode = recv_opcode_send_ack(new_dev, buffer);
 
-    //let a child process to manage  
-    pid = fork();
-    if(pid < 0){
-        printf("[server] error fork()\n");
-        exit(-1);
-    }
-    
-    if(pid == 0){   //son process
-        switch (opcode){
-        case 0:                                                     //signup command
-
-            //recevive username and password
-            if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
-                perror("[server]: Error recv: \n");
-                exit(-1);
-            }
-
-            //add device to device list 
-            strcpy(username, strtok(buffer, DELIMITER));
-            strcpy(password, strtok(NULL, DELIMITER));
-            printf("username: %s\npassword: %s\n", username, password);
-            ret = add_dev(new_dev, new_addr, username, password);
-
-            prompt();
-
-            close(new_dev);
-            break;
-        case 1:                                                     //in command
-
-            //recevive username and password
-            if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
-                perror("[server]: Error recv: \n");
-                exit(-1);
-            }
-
-            //split buffer in two string: username and password
-            strcpy(username, strtok(buffer, DELIMITER));
-            strcpy(password, strtok(NULL, DELIMITER));
-            // printf("username: %s\npassword: %s\n\n", username, password);
-            sleep(2);
-
-            //receive port
-            uint16_t p;
-            if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
-                perror("[server]: Error recv: \n");
-                exit(-1);
-            }
-            port = ntohs(p);
-  
-            //add device to list and connect          
-            ret = check_and_connect(new_dev, port, username, password);
-            prompt();
-            break;
-
-        case 2:
-            printf("HANGING BRANCH!\n");
-
-            recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
-            printf("%s\n", buffer);
-
-            break;
-
-        case 3:
-            printf("SHOW BRANCH!\n");
-            break;
-
-        case 4:
-            printf("CHAT BRANCH!\n");
-            break;
-
-        case 5:
-            printf("SHARE BRANCH!\n");
-            break;
-
-        case 6:
-            printf("OUT BRANCH!\n");
-            break;
-
-
-        default:
-            printf("[server] halde_request: opcode is not valid!\n");
-            break;
+    //semmai fare una fork() qui ???
+    switch (opcode){
+    case 0:                                                     //signup command
+        //recevive username and password
+        if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
         }
-    }
-    else{
-        //father process
+        sleep(1);
+
+        //add device to device list
+        strcpy(username, strtok(buffer, DELIMITER));
+        strcpy(password, strtok(NULL, DELIMITER));
+        ret = add_dev(new_dev, new_addr, username, password);
+
+        prompt();
+
+        close(new_dev);
+        break;
+    case 1:                                                     //in command
+
+        //recevive username and password
+        if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
+        }
+
+        //split buffer in two string: username and password
+        strcpy(username, strtok(buffer, DELIMITER));
+        strcpy(password, strtok(NULL, DELIMITER));
+        sleep(1);
+
+        //receive port
+        uint16_t p;
+        if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
+        }
+        port = ntohs(p);
+
+        //receive addr
+        struct sockaddr_in a;
+        /*
+        if(!recv(new_dev, (void*)&a, sizeof(struct sockaddr_in), 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
+        }
+        printf("addr: %d\n", a);
+        */
+
+        //add device to list and connect          
+        ret = check_and_connect(new_dev, port, a, username, password);
+        
+        prompt();
+        break;
+
+    case 2:
+        printf("HANGING BRANCH!\n");
+
+        recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
+        printf("%s\n", buffer);
+
+        break;
+
+    case 3:
+        printf("SHOW BRANCH!\n");
+        break;
+
+    case 4:
+        printf("CHAT BRANCH!\n");
+        break;
+
+    case 5:
+        printf("SHARE BRANCH!\n");
+        break;
+
+    case 6:
+        printf("OUT BRANCH!\n");
+
+        //find device and disconnect from network
+        // // int id = find_device();
+        // if(id == -1){
+        //     printf("[sever] handle_request: device not found!\n");
+        //     break;
+        // }
+
+        // struct device* d = &devices[id];
+        // d->connected = false;
+
+        // send(new_dev, "ACK", BUFFER_SIZE, 0);
+        // list_command();
+
+        // close(new_dev);
+        // break;
+
+    default:
+        printf("[server] halde_request: opcode is not valid!\n");
+        break;
     }
 }
 
@@ -378,7 +375,7 @@ int main(int argc, char** argv){
 		exit(-1);
     }
     
-    // n_conn = n_dev = 0;
+    n_conn = n_dev = 0;
 
     //create socket to get request
 	create_tcp_socket(argv[1]);
