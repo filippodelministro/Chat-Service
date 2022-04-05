@@ -131,11 +131,12 @@ int recv_int(struct device d){
     return t;
 }
 
-int dev_init(const char* usr, const char* pswd){
+int dev_init(int id, const char* usr, const char* pswd){
     
     char buffer[BUFFER_SIZE];
     struct device* d = &my_device;
 
+    d->id = id;
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
     strncpy(d->username, usr, sizeof(usr));
@@ -217,12 +218,19 @@ void signup_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
+    //!!!!!!!!!
     //receive dev_id
-    // recv_int();
+    //recv_int();                       <==== fa la stessa cosa
+    uint16_t num;
+    recv(listening_socket, (void*)&num, sizeof(uint16_t), 0);
+    //recv(server.sd, (void*)&num, sizeof(uint16_t), 0);       //non va nessuna delle due
+    int dev_id = ntohs(num);
+    printf("[device] Received dev_id: %d\n", dev_id);
+    //!!!!!!!!!
 
     //update device structure with dev_id get from server
-    // dev_init(username, password);
- 
+    //dev_init(dev_id, username, password);
+
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }

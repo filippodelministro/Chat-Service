@@ -338,8 +338,14 @@ void handle_request(){
         strcpy(password, strtok(NULL, DELIMITER));
         ret = add_dev(new_dev, new_addr, username, password);
 
-        //send dev_id
-        //send_int(ret, devices[ret]);
+        //!!!!!!!!!
+        //mando il dev_id al client
+        //send_int(ret, devices[ret]);      <=== fa la stessa cosa
+        //mando sempre 1 per provare sta cazzo di send
+        uint16_t t = htons(1/*ret*/);   // => dovrebbe arrivare sempre 
+        send(new_dev, (void*)&t, sizeof(uint16_t), 0);  
+        printf("Mandato un 1 per prova!\nGuarda il device in \n\t[device] Received dev_id: <...>\n");
+        //!!!!!!!!!
 
         prompt();
 
@@ -404,8 +410,6 @@ void handle_request(){
         break;
 
     case 6:
-        printf("OUT BRANCH!\n");
-        
         //change it to ID base handsake
         //handsake to get device port
         if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
@@ -413,7 +417,7 @@ void handle_request(){
             exit(-1);
         }
         port = ntohs(p);
-        printf("port: %d", port);
+        printf("received port: %d\n", port);
 
         // find device and disconnect from network
         id = find_device_from_port(port);
