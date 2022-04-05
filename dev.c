@@ -5,20 +5,20 @@
 //////////////////////////////////////////////////////////////////////////
 
 //-----------     DEVICE    -----------------
-int my_port;
-bool connected = false;
-bool registred = false;
-struct sockaddr_in my_addr;
-
-//each device has a port and a socket descriptor
 struct device{
     int port;                   // port number       
     int sd;                     // TCP socket
-    struct sockaddr_in sd_addr;  
-}devices[MAX_DEVICES];  //devices array
+    struct sockaddr_in addr;  
 
-int n_dev = 0;                  //number of devices
+    int id;
+    bool connected;
+    bool registred;
+    struct tm* tv;
+    char* username;
+    char* password;
+};
 
+struct device my_device;
 
 //-----------     SERVER    -----------------
 //server considered as a device
@@ -44,7 +44,7 @@ void prompt(){
 
 //prompt a boot message on stdout
 void boot_message(){
-    printf("**********************PEER %d**********************\n", my_port);
+    printf("**********************PEER %d**********************\n", my_device.port);
     printf( "Create an account or login to continue:\n"
                 "1) signup  <srv_port> <username> <password>    --> create account\n"
                 "2) in      <srv_port> <username> <password>    --> connect to server\n"
@@ -80,13 +80,13 @@ void create_srv_socket_tcp(int p){
     }
 
     //address
-    memset(&server.sd_addr, 0, sizeof(server.sd_addr));
-    server.sd_addr.sin_family = AF_INET;
-    server.sd_addr.sin_port = htons(p);
+    memset(&server.addr, 0, sizeof(server.addr));
+    server.addr.sin_family = AF_INET;
+    server.addr.sin_port = htons(p);
     // srv_addr_tcp.sin_addr.s_addr = INADDR_ANY;
-    inet_pton(AF_INET, "127.0.0.1", &server.sd_addr.sin_addr);
+    inet_pton(AF_INET, "127.0.0.1", &server.addr.sin_addr);
 
-    if(connect(server.sd, (struct sockaddr*)&server.sd_addr, sizeof(server.sd_addr)) == -1){
+    if(connect(server.sd, (struct sockaddr*)&server.addr, sizeof(server.addr)) == -1){
         perror("[device]: error connect(): ");
         exit(-1);
     }
@@ -109,33 +109,58 @@ void send_opcode_recv_ack(int op){
     printf("[device] Received acknoledge!\n");
 }
 
+/*
 void send_port_to_srv(int port){
     uint16_t p = htons(port);
     send(server.sd, (void*)&p, sizeof(uint16_t), 0);
 }
-//to do???
+*/
 
-//send a int to a device 
-void send_lenght(struct device* dev, int l){
-    int port = dev->port;
-    int sd = dev->sd;
-    // struct sockaddr_in sd_addr = dev->sd_addr;
-    int sd_addr_l = sizeof(dev->sd_addr);
-    char buffer[BUFFER_SIZE];
-
-    //send lenght to device
-    memset(buffer, l, sizeof(int));
-    send(sd, buffer, sizeof(int), 0);
+void send_int(int i, struct device d){
+    uint16_t p = htons(i);
+    send(d.sd, (void*)&p, sizeof(uint16_t), 0);
 }
+
+int dev_init(const char* usr, const char* pswd){
+    
+    char buffer[BUFFER_SIZE];
+    struct device* d = &my_device;
+
+    d->username = malloc(sizeof(usr));
+    d->password = malloc(sizeof(pswd));
+    strncpy(d->username, usr, sizeof(usr));
+    strncpy(d->password, pswd, sizeof(usr));
+
+    printf("[device] dev_init: You are now registered!\n"
+                    "\t dev_id: %u \n"
+                    "\t username: %s \n"
+                    "\t password: %s\n",
+                    d->id, d->username, d->password
+    );
+}
+
+
+//to do???
+//not working
+int recv_int(struct device d){
+    uint16_t p;
+        if(!recv(d.sd, (void*)&p, sizeof(uint16_t), 0)){
+            perror("[server]: Error recv: \n");
+            exit(-1);
+        }
+    return ntohs(p);
+}
+
 
 void send_message(struct device* dev, char* string){
     int port = dev->port;
     int sd = dev->sd;
     // struct sockaddr_in sd_addr = dev->sd_addr;
-    int sd_addr_l = sizeof(dev->sd_addr);
+    int sd_addr_l = sizeof(dev->addr);
     char buffer[BUFFER_SIZE];
 
     //send lenght to device
+    // strcpy(buffer, "prova!");
     strcpy(buffer, string);
     // memchr((void*)buffer, string, sizeof(string));
     send(sd, buffer, sizeof(string), 0);
@@ -185,6 +210,7 @@ void signup_command(){
 
     //send opcode to server and wait for ack
     send_opcode_recv_ack(SIGNUP_OPCODE);
+    sleep(1);
 
     //send username and password to server
     strcat(buffer, username);
@@ -192,14 +218,16 @@ void signup_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
-    //if OK
-    //complete: device is now online
-    registred = true;
-    printf("[device] You are now registred!\n"); 
+    //receive dev_id
+    //change it to ID based handshake           ???
+    memset(buffer, 0, BUFFER_SIZE);
+    recv(listening_socket, (void*)buffer, BUFFER_SIZE, 0);
+    printf("received buffer:");
+    printf("%s\n", buffer);
 
-    //if NOT OK
-    //printf("[device] signup_command: Account already exists!\n");
-
+    //update device structure with dev_id get from server
+    dev_init(username, password);
+ 
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
@@ -218,7 +246,7 @@ void in_command(){
     scanf("%s", username);
     scanf("%s", password);
 
-    //prompt confermation message                   //maybe to remove
+    //prompt confermation message
     printf("[device] in_command: got your data! \n"
         "\t srv_port: %d \n"
         "\t username: %s \n"
@@ -230,30 +258,20 @@ void in_command(){
 
     //send opcode to server and wait for ack
     send_opcode_recv_ack(IN_OPCODE);
+    sleep(1);
 
     //send username and password to server
     strcat(buffer, username);
     strcat(buffer, DELIMITER);
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
-	sleep(1);
 
     //send port to server
-    // send_port_to_srv(my_port);
-    uint16_t p = htons(my_port);
-    send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+    send_int(my_device.port, server);
 
-    // sleep(1);
-    //send addr to server
-    // struct sockaddr_in a = htons(my_addr);
-
-    // printf("my_addr: %d\n", my_addr);
-
-    // struct sockaddr_in a = my_addr;
-    // send(server.sd, (void*)&a, sizeof(struct sockaddr_in), 0);
-    
     //complete: device is now online
-    connected = true;
+    close(server.sd);
+    my_device.connected = true;
     printf("[device] You are now online!\n");
 
     memset(buffer, 0, sizeof(buffer));
@@ -283,23 +301,27 @@ void share_command(){
 }
 
 void out_command(){
-    char buffer[BUFFER_SIZE];
-
     create_srv_socket_tcp(server.port);
-    
+
     send_opcode_recv_ack(OUT_OPCODE);
     sleep(1);
 
-    // send_port_to_srv(my_port);
-    uint16_t p = htons(my_port);
-    send(server.sd, (void*)&p, sizeof(uint16_t), 0);
+    //change it to ID base handsake
+    send_int(my_device.port, server);
 
-    
-    recv(server.sd, buffer, BUFFER_SIZE, 0);
-    printf("%s\n", buffer);
-    connected = false;
-    
-    printf("[device] You are now offline!\n");
+    my_device.connected = false;    
+
+    //Do ACK from server to safe disconnect 
+    /*
+    if(recv_int(server) == my_device.sd){
+        
+
+        my_device.connected = false;    
+        printf("[device] You are now offline!\n");
+    }
+    else printf("[device] out_command: Error! Device not online!\n");
+    */
+
 
     close(server.sd);
 }
@@ -315,13 +337,13 @@ void read_command(){
     //signup and in allowed only if not connected
     //other command allowed only if connected
     if(!strncmp(cmd, "help", 4)){
-        if(connected)
+        if(my_device.connected)
             help_command();
         else
             boot_message();
     }
     else if(!strncmp(cmd, "signup", 6)){
-        if(!connected)
+        if(!my_device.connected)
             signup_command();
         else{
             printf("Device already connected! Try one of below:\n");
@@ -329,28 +351,28 @@ void read_command(){
         }
     }
 	else if (!strncmp(cmd, "in", 2)){
-        if(!connected)
+        if(!my_device.connected)
             in_command();
         else{
             printf("device already connected! Try one of below:\n");
             help_command();
         }
     }
-	else if (!strncmp(cmd, "hanging", 7) && connected)	
+	else if (!strncmp(cmd, "hanging", 7) && my_device.connected)	
 		hanging_command();
-    else if (!strncmp(cmd, "show", 4) && connected)	
+    else if (!strncmp(cmd, "show", 4) && my_device.connected)	
 		show_command();
-    else if (!strncmp(cmd, "chat", 4) && connected)	
+    else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
-	else if (!strncmp(cmd, "share", 5) && connected)	
+	else if (!strncmp(cmd, "share", 5) && my_device.connected)	
         share_command();
-    else if (!strncmp(cmd, "out", 3) && connected)
+    else if (!strncmp(cmd, "out", 3) && my_device.connected)
         out_command();
 
     //command is not valid; ask to help_command and show available command
 	else{
         printf("Command is not valid!\n");
-            if(connected) help_command();
+            if(my_device.connected) help_command();
             else boot_message();
     }						
 }
@@ -371,7 +393,7 @@ int main(int argc, char* argv[]){
 		exit(-1);
     }
 
-    my_port = atoi(argv[1]);
+    my_device.port = atoi(argv[1]);
 
    //Initialise set structure 
 	fdt_init();
