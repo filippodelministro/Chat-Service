@@ -57,7 +57,7 @@ void list_command(){
 
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t#%d)\t%s\t\t%d:%d:%d\t\t%d\t%d\n",
+                printf("\t#%d)\t%s\t\t%d:%d:%d\t%d\t%d\n",
                     i, d->username, 
                     d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
                     d->port, d->sd
@@ -112,7 +112,6 @@ void read_command(){
     prompt();
 }
 
-//to do         ???
 
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
@@ -120,16 +119,16 @@ void read_command(){
 //////////////////////////////////////////////////////////////////////////
 
 //handshake to get opcode; prompted in stdout
-uint16_t recv_opcode_send_ack(int sd, char* buf){
+uint16_t recv_opcode_send_ack(int sd){
     uint16_t op;
-
     if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
-    op = ntohs(op);
 
-    send(sd, buf, strlen(buf), 0);           //send ACK
+    send(sd, (void*)&op, sizeof(uint16_t), 0);           //send ACK
+    
+    op = ntohs(op);
     printf("\n[server] revc_opcode_send_ack: received opcode: %d\n", op);
     return op;
 }
@@ -148,8 +147,8 @@ int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
     strncpy(d->password, pswd, sizeof(usr));
 
     printf("[server] add_dev: added new device! \n"
-                    "\t dev_id: %d \n"
-                    "\t username: %s \n"
+                    "\t dev_id: %d\n"
+                    "\t username: %s\n"
                     "\t password: %s\n",
                     n_dev, d->username, d->password
     );
@@ -263,21 +262,41 @@ void create_tcp_socket(char* port){
     printf("[server] create_tcp_socket: waiting for connection...\n");
 }
 
+void send_int_recv_ack(int i, struct device d){
+    //send opcode to server
+    uint16_t num = htons(i);
+    printf("[device] send_int_recv_ack: send \n\ti: %d\nnum: %d\n\t", i, num);
+    send(d.sd, (void*)&num, sizeof(uint16_t), 0);
+
+    //receive akc to proceed
+    recv(d.sd, (void*)&num, sizeof(uint16_t), 0);
+    i = ntohs(num);
+    int ii = ntohs(num);
+    printf("[device] send_int_recv_ack: Received acknoledge: \n\tii:%d\n\tnum:", ii, num);
+}
+
+uint16_t recv_int_send_ack(struct device d){
+    uint16_t num;
+    if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
+        perror("[server]: Error recv: \n");
+        exit(-1);
+    }
+
+    send(d.sd, (void*)&num, sizeof(uint16_t), 0);           //send ACK
+    
+    num = ntohs(num);
+    printf("\n[server] revc_int_send_ack: received num: %d\n", num);
+    return num;
+}
+
 void send_int(int i, struct device d){
     uint16_t p = htons(i);
     send(d.sd, (void*)&p, sizeof(uint16_t), 0);
 }
-
+////////////////////////////////////////////////////////////////////////
 
 //to do                 ???
-int recv_int(struct device d){
-    uint16_t p;
-        if(!recv(d.sd, (void*)&p, sizeof(uint16_t), 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-    return ntohs(p);
-}
+
 //prende opcode dal device (recv), poi lo fa gestire da un 
 //processo figlio con uno switch case
 void handle_request(){
@@ -302,7 +321,7 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    opcode = recv_opcode_send_ack(new_dev, buffer);
+    opcode = recv_opcode_send_ack(new_dev);
     printf("opcode: %d\n", opcode);
 
     //semmai fare una fork() qui ???
@@ -319,18 +338,9 @@ void handle_request(){
         strcpy(password, strtok(NULL, DELIMITER));
         ret = add_dev(new_dev, new_addr, username, password);
 
-        memset(buffer, 0, BUFFER_SIZE);
-        strcpy(buffer, "prova");
-        send(new_dev, (void*)buffer, strlen(buffer), 0);
-        printf("send dev_id: %s\n", buffer);
-
         //send dev_id
-        // printf("ret: %d\n", ret);
-        // send_int(ret, devices[find_device(username, password)]);
+        //send_int(ret, devices[ret]);
 
-        // ret = recv_int(devices[find_device(username, password)]);
-        
-       
         prompt();
 
         close(new_dev);
@@ -355,7 +365,7 @@ void handle_request(){
             exit(-1);
         }
         port = ntohs(p);
-        // printf("received port: %d\n", port);
+        printf("received port: %d\n", port);
 
         //add device to list and connect          
         ret = check_and_connect(new_dev, port, username, password);
@@ -378,6 +388,15 @@ void handle_request(){
 
     case 4:
         printf("CHAT BRANCH!\n");
+
+        // printf("MANDO ROBA!\n");
+        // strcpy(buffer, "Hello");
+        // send(new_dev, (void*)buffer, 6, 0);
+
+        // recv(new_dev, (void*)buffer, 6, 0);
+        // printf("%s\n", buffer);
+        // printf("RICEVUTA!\n\n");
+
         break;
 
     case 5:
@@ -405,14 +424,14 @@ void handle_request(){
         printf("id trovato: %d", id);
 
         //send ACK to safe disconnect
-        // send_int(id, devices[id]);
+        //send_int(id, devices[id]);
         
         struct device* d = &devices[id];
         d->connected = false;
         n_conn--;
 
         list_command();
-        close(new_dev);
+        // close(new_dev);
         prompt();
         
 

@@ -24,3 +24,7 @@
 #define OUT_OPCODE          6
 
 char* DELIMITER = "-";
+
+void clear_buffer(char* b){
+    memset(b, 0, strlen(b));
+}

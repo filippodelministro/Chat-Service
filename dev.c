@@ -95,18 +95,15 @@ void create_srv_socket_tcp(int p){
 }
 
 void send_opcode_recv_ack(int op){
-
-    //copy opcode to buffer and send to server
-    char buffer[BUFFER_SIZE];
-
     //send opcode to server
     printf("[device] send opcode to server...\n");
     uint16_t opcode = htons(op);
     send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
 
     //receive akc to proceed
-    recv(listening_socket, buffer, BUFFER_SIZE, 0);
-    printf("[device] Received acknoledge!\n");
+    recv(listening_socket, (void*)&opcode, sizeof(uint16_t), 0);
+    int t = ntohs(opcode);
+    printf("[device] Received acknoledge: %d\n", t);
 }
 
 /*
@@ -117,8 +114,21 @@ void send_port_to_srv(int port){
 */
 
 void send_int(int i, struct device d){
+    printf("[device] send_int: sending '%d'\n", i);
     uint16_t p = htons(i);
     send(d.sd, (void*)&p, sizeof(uint16_t), 0);
+}
+
+int recv_int(struct device d){
+    uint16_t num;
+    if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
+        perror("[device]: Error recv: \n");
+        exit(-1);
+    }
+
+    int t = ntohs(num);
+    printf("[device] revc_int: received '%d'\n", t);
+    return t;
 }
 
 int dev_init(const char* usr, const char* pswd){
@@ -141,17 +151,6 @@ int dev_init(const char* usr, const char* pswd){
 
 
 //to do???
-//not working
-int recv_int(struct device d){
-    uint16_t p;
-        if(!recv(d.sd, (void*)&p, sizeof(uint16_t), 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-    return ntohs(p);
-}
-
-
 void send_message(struct device* dev, char* string){
     int port = dev->port;
     int sd = dev->sd;
@@ -219,14 +218,10 @@ void signup_command(){
     send(server.sd, buffer, strlen(buffer), 0);
 
     //receive dev_id
-    //change it to ID based handshake           ???
-    memset(buffer, 0, BUFFER_SIZE);
-    recv(listening_socket, (void*)buffer, BUFFER_SIZE, 0);
-    printf("received buffer:");
-    printf("%s\n", buffer);
+    // recv_int();
 
     //update device structure with dev_id get from server
-    dev_init(username, password);
+    // dev_init(username, password);
  
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
@@ -292,7 +287,22 @@ void show_command(){
 }
 
 void chat_command(){
+    char buffer[BUFFER_SIZE];
+    create_srv_socket_tcp(server.port);
+
     send_opcode_recv_ack(CHAT_OPCODE);
+    sleep(1);
+
+    memset(buffer, 0, strlen(buffer));
+    recv(server.sd, (void*)buffer, 6, 0);
+    printf("%s\n", buffer);
+    printf("RICEVUTA!\n\n");
+
+    printf("MANDO ROBA!\n");
+    memset(buffer, 0, strlen(buffer));
+    strcpy(buffer, "Hello");
+    send(server.sd, (void*)buffer, 6, 0);
+
     printf("COMANDO CHAT ESEGUITO \n");
 }
 
@@ -308,20 +318,17 @@ void out_command(){
 
     //change it to ID base handsake
     send_int(my_device.port, server);
-
     my_device.connected = false;    
+    printf("[device] You are now offline!\n");
 
-    //Do ACK from server to safe disconnect 
+    //wait ACK from server to safe disconnect
     /*
     if(recv_int(server) == my_device.sd){
-        
-
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
     else printf("[device] out_command: Error! Device not online!\n");
     */
-
 
     close(server.sd);
 }
