@@ -135,6 +135,7 @@ int recv_int(struct device d){
     return t;
 }
 
+//initialize my_device structure with usr/pswd get by user & dev_id get server
 int dev_init(int id, const char* usr, const char* pswd){
     
     char buffer[BUFFER_SIZE];
@@ -153,7 +154,6 @@ int dev_init(int id, const char* usr, const char* pswd){
                     d->id, d->username, d->password
     );
 }
-
 
 //to do???
 void send_message(struct device* dev, char* string){
@@ -222,19 +222,19 @@ void signup_command(){
 
     //!!!!!!!!!
     //receive dev_id
-    //recv_int();                       <==== fa la stessa cosa
+    //recv_int(server);                   <==== fa la stessa cosa
     uint16_t num;
-    recv(listening_socket, (void*)&num, sizeof(uint16_t), 0);
-    //recv(server.sd, (void*)&num, sizeof(uint16_t), 0);       //non va nessuna delle due
+    // recv(listening_socket, (void*)&num, sizeof(uint16_t), 0);
+    recv(server.sd, (void*)&num, sizeof(uint16_t), 0);       //non va nessuna delle due
     int dev_id = ntohs(num);
     printf("[device] Received dev_id: %d\n", dev_id);
     //!!!!!!!!!
 
     //update device structure with dev_id get from server
-    //dev_init(dev_id, username, password);
+    dev_init(dev_id, username, password);
 
     memset(buffer, 0, sizeof(buffer));
-    close(server.sd);
+    // close(server.sd);
 }
 
 void in_command(){
@@ -271,14 +271,16 @@ void in_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
+    send_int(my_device.id, server);
+
     //send port to server
     send_int(my_device.port, server);
 
     //get pend_msgs from server
-    my_device.msg_pend = recv_int(server);
+    // my_device.msg_pend = recv_int(server);
 
     //complete: device is now online
-    close(server.sd);
+    // close(server.sd);
     my_device.connected = true;
     printf("[device] You are now online!\n");
 
@@ -309,7 +311,7 @@ void chat_command(){
     sleep(1);
     send_int(my_device.id, server);
 
-    send_message(&server, username);
+    // send_message(&server, username);
 
     printf("COMANDO CHAT ESEGUITO \n");
 }
@@ -338,7 +340,7 @@ void out_command(){
     else printf("[device] out_command: Error! Device not online!\n");
     */
 
-    close(server.sd);
+    // close(server.sd);
 }
 
 //command for routine services
