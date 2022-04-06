@@ -275,18 +275,29 @@ void send_int_recv_ack(int i, struct device d){
     printf("[device] send_int_recv_ack: Received acknoledge: \n\tii:%d\n\tnum:", ii, num);
 }
 
-uint16_t recv_int_send_ack(struct device d){
+int get_id(int sd){
+    int ret;
+    uint16_t ret_;
+    if(!recv(sd, (void*)&ret_, sizeof(uint16_t), 0)){
+            printf("[server] Error recv!\n");
+            exit(-1);
+        }
+    ret = ntohs(ret_);
+    printf("[server] get_id: %d\n", ret);
+    return ret;
+}
+
+int recv_int(struct device d){
     uint16_t num;
+    int t;
     if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
-
-    send(d.sd, (void*)&num, sizeof(uint16_t), 0);           //send ACK
     
-    num = ntohs(num);
-    printf("\n[server] revc_int_send_ack: received num: %d\n", num);
-    return num;
+    t = ntohs(num);
+    printf("\n[server] revc_int_send_ack: received num: %d\n", t);
+    return t;
 }
 
 void send_int(int i, struct device d){
@@ -308,14 +319,16 @@ void handle_request(){
 
     char buffer[BUFFER_SIZE];
     int ret;
-    pid_t pid;
+    uint16_t ret_;
+    // pid_t pid;
 
     //tell which command to do
     uint16_t opcode;
 
     //for signup and in command
     int port;
-    uint16_t id;
+    // uint16_t id;
+    int id;
     char username[1024];
     char password[1024];
 
@@ -383,40 +396,54 @@ void handle_request(){
     case 2:
         printf("HANGING BRANCH!\n");
 
-        recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
-        printf("%s\n", buffer);
+        // id = get_id(new_dev);
+        // prompt();
+
 
         break;
 
     case 3:
         printf("SHOW BRANCH!\n");
+
+        // id = get_id(new_dev);
+        // prompt();
+
         break;
 
     case 4:
         printf("CHAT BRANCH!\n");
 
-        // printf("MANDO ROBA!\n");
-        // strcpy(buffer, "Hello");
-        // send(new_dev, (void*)buffer, 6, 0);
-
-        // recv(new_dev, (void*)buffer, 6, 0);
-        // printf("%s\n", buffer);
-        // printf("RICEVUTA!\n\n");
-
+        id = get_id(new_dev);
+        int f = recv_int(devices[id]);
+        if(!recv(new_dev, (void*)&buffer, f, 0)){
+            printf("[server] Error recv!\n");
+            exit(-1);
+        }
+        printf("%s\n", buffer);
+        
+        prompt();
         break;
 
     case 5:
         printf("SHARE BRANCH!\n");
+
+        // id = get_id(new_dev);
+        // prompt();
+
+
         break;
 
     case 6:
-        //change it to ID base handsake
+        //change it to ID base handsake         <====
+        // id = get_id(new_dev);
+        // prompt();
+
         //handsake to get device port
-        if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
+        if(!recv(new_dev, (void*)&ret_, sizeof(uint16_t), 0)){
             perror("[server]: Error recv: \n");
             exit(-1);
         }
-        port = ntohs(p);
+        port = ntohs(ret_);
         printf("received port: %d\n", port);
 
         // find device and disconnect from network
@@ -428,7 +455,7 @@ void handle_request(){
         printf("id trovato: %d", id);
 
         //send ACK to safe disconnect
-        //send_int(id, devices[id]);
+        //send_int(id, devices[id]);            <====
         
         struct device* d = &devices[id];
         d->connected = false;

@@ -10,12 +10,16 @@ struct device{
     int sd;                     // TCP socket
     struct sockaddr_in addr;  
 
+    //device info
     int id;
     bool connected;
     bool registred;
     struct tm* tv;
     char* username;
     char* password;
+
+    //chat info
+    int msg_pend;
 };
 
 struct device my_device;
@@ -155,15 +159,13 @@ int dev_init(int id, const char* usr, const char* pswd){
 void send_message(struct device* dev, char* string){
     int port = dev->port;
     int sd = dev->sd;
-    // struct sockaddr_in sd_addr = dev->sd_addr;
-    int sd_addr_l = sizeof(dev->addr);
     char buffer[BUFFER_SIZE];
 
-    //send lenght to device
-    // strcpy(buffer, "prova!");
-    strcpy(buffer, string);
-    // memchr((void*)buffer, string, sizeof(string));
-    send(sd, buffer, sizeof(string), 0);
+    send_int(strlen(string), *dev);
+
+    strcpy(buffer, "Ciao");
+    // strcpy(buffer, string);
+    send(sd, buffer, strlen(string), 0);
 }
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
@@ -272,6 +274,9 @@ void in_command(){
     //send port to server
     send_int(my_device.port, server);
 
+    //get pend_msgs from server
+    my_device.msg_pend = recv_int(server);
+
     //complete: device is now online
     close(server.sd);
     my_device.connected = true;
@@ -295,21 +300,16 @@ void show_command(){
 }
 
 void chat_command(){
-    char buffer[BUFFER_SIZE];
+    char* username;
+    scanf("%s", username);
+ 
+    //first handshake
     create_srv_socket_tcp(server.port);
-
     send_opcode_recv_ack(CHAT_OPCODE);
     sleep(1);
+    send_int(my_device.id, server);
 
-    memset(buffer, 0, strlen(buffer));
-    recv(server.sd, (void*)buffer, 6, 0);
-    printf("%s\n", buffer);
-    printf("RICEVUTA!\n\n");
-
-    printf("MANDO ROBA!\n");
-    memset(buffer, 0, strlen(buffer));
-    strcpy(buffer, "Hello");
-    send(server.sd, (void*)buffer, 6, 0);
+    send_message(&server, username);
 
     printf("COMANDO CHAT ESEGUITO \n");
 }
