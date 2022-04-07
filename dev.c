@@ -136,16 +136,15 @@ int recv_int(struct device d){
 }
 
 //initialize my_device structure with usr/pswd get by user & dev_id get server
-int dev_init(int id, const char* usr, const char* pswd){
+void dev_init(int id, const char* usr, const char* pswd){
     
-    char buffer[BUFFER_SIZE];
     struct device* d = &my_device;
 
     d->id = id;
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
-    strncpy(d->username, usr, sizeof(usr));
-    strncpy(d->password, pswd, sizeof(usr));
+    strcpy(d->username, usr);
+    strcpy(d->password, pswd);
 
     printf("[device] dev_init: You are now registered!\n"
                     "\t dev_id: %u \n"
@@ -157,7 +156,7 @@ int dev_init(int id, const char* usr, const char* pswd){
 
 //to do???
 void send_message(struct device* dev, char* string){
-    int port = dev->port;
+    // int port = dev->port;
     int sd = dev->sd;
     char buffer[BUFFER_SIZE];
 
@@ -302,8 +301,8 @@ void show_command(){
 }
 
 void chat_command(){
-    char* username;
-    scanf("%s", username);
+    // char* username;
+    // scanf("%s", username);
  
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -401,8 +400,9 @@ void read_command(){
 
 int main(int argc, char* argv[]){
     
-    int i, newfd, ret;
-    socklen_t addrlen;
+    int i;
+    // int i, newfd, ret;
+    // socklen_t addrlen;
     char buffer[BUFFER_SIZE];
 
     if(argc != 2){

@@ -145,8 +145,8 @@ int add_dev(const char* usr, const char* pswd){
     d->id = n_dev;
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
-    strncpy(d->username, usr, sizeof(usr));
-    strncpy(d->password, pswd, sizeof(usr));
+    strcpy(d->username, usr);
+    strcpy(d->password, pswd);
 
     printf("[server] add_dev: added new device! \n"
                     "\t dev_id: %d\n"
@@ -262,19 +262,6 @@ void create_tcp_socket(char* port){
     listen(listening_socket, MAX_DEVICES);
 
     printf("[server] create_tcp_socket: waiting for connection...\n");
-}
-
-void send_int_recv_ack(int i, struct device d){
-    //send opcode to server
-    uint16_t num = htons(i);
-    printf("[device] send_int_recv_ack: send \n\ti: %d\nnum: %d\n\t", i, num);
-    send(d.sd, (void*)&num, sizeof(uint16_t), 0);
-
-    //receive akc to proceed
-    recv(d.sd, (void*)&num, sizeof(uint16_t), 0);
-    i = ntohs(num);
-    int ii = ntohs(num);
-    printf("[device] send_int_recv_ack: Received acknoledge: \n\tii:%d\n\tnum:", ii, num);
 }
 
 //get id and set socket for this device
@@ -429,7 +416,7 @@ void handle_request(){
         printf("CHAT BRANCH!\n");
         
         id = get_id_set_sd(new_dev);
-        int f = recv_int(devices[id]);
+        // int f = recv_int(devices[id]);
         /*
         if(!recv(new_dev, (void*)&buffer, f, 0)){
             printf("[server] Error recv!\n");
