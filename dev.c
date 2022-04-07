@@ -11,7 +11,7 @@ struct device{
     struct sockaddr_in addr;  
 
     //device info
-    int id;
+    uint16_t id;
     bool connected;
     bool registred;
     struct tm* tv;
@@ -103,10 +103,25 @@ void send_opcode_recv_ack(int op){
     printf("[device] send opcode to server...\n");
     uint16_t opcode = htons(op);
     send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
+    sleep(1);
 
     //receive akc to proceed
     recv(listening_socket, (void*)&opcode, sizeof(uint16_t), 0);
     int t = ntohs(opcode);
+    printf("[device] Received acknoledge: %d\n", t);
+}
+
+void send_prova(int op){
+    //send opcode to server
+    printf("[device] send opcode to server...\n");
+    uint16_t opcode = htons(op);
+    send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
+    sleep(1);
+
+    //receive akc to proceed
+    uint16_t num;
+    recv(listening_socket, (void*)&num, sizeof(uint16_t), 0);
+    int t = ntohs(num);
     printf("[device] Received acknoledge: %d\n", t);
 }
 
@@ -117,12 +132,15 @@ void send_port_to_srv(int port){
 }
 */
 
+/*
 void send_int(int i, struct device d){
     printf("[device] send_int: sending '%d'\n", i);
     uint16_t p = htons(i);
     send(d.sd, (void*)&p, sizeof(uint16_t), 0);
 }
+*/
 
+/*
 int recv_int(struct device d){
     uint16_t num;
     if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
@@ -134,6 +152,7 @@ int recv_int(struct device d){
     printf("[device] revc_int: received '%d'\n", t);
     return t;
 }
+*/
 
 //initialize my_device structure with usr/pswd get by user & dev_id get server
 void dev_init(int id, const char* usr, const char* pswd){
@@ -154,18 +173,6 @@ void dev_init(int id, const char* usr, const char* pswd){
     );
 }
 
-//to do???
-void send_message(struct device* dev, char* string){
-    // int port = dev->port;
-    int sd = dev->sd;
-    char buffer[BUFFER_SIZE];
-
-    send_int(strlen(string), *dev);
-
-    strcpy(buffer, "Ciao");
-    // strcpy(buffer, string);
-    send(sd, buffer, strlen(string), 0);
-}
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
 ///                              COMMAND                               ///
@@ -181,8 +188,8 @@ void help_command(){
             "5) out       --> ??\n"
     );
 }
-//to do         ???
 
+//to do         ???
 void signup_command(){
 
     char port[1024];
@@ -219,18 +226,10 @@ void signup_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
-    //!!!!!!!!!
-    //receive dev_id
-    //recv_int(server);                   <==== fa la stessa cosa
-    uint16_t num;
-    // recv(listening_socket, (void*)&num, sizeof(uint16_t), 0);
-    recv(server.sd, (void*)&num, sizeof(uint16_t), 0);       //non va nessuna delle due
-    int dev_id = ntohs(num);
-    printf("[device] Received dev_id: %d\n", dev_id);
-    //!!!!!!!!!
+    //receive dev_id from server
 
     //update device structure with dev_id get from server
-    dev_init(dev_id, username, password);
+    // dev_init(dev_id, username, password);
 
     memset(buffer, 0, sizeof(buffer));
     // close(server.sd);
@@ -270,10 +269,11 @@ void in_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
-    send_int(my_device.id, server);
+    //
+    // send_int(my_device.id, server.sd);
 
     //send port to server
-    send_int(my_device.port, server);
+    send_int(my_device.port, server.sd);
 
     //get pend_msgs from server
     // my_device.msg_pend = recv_int(server);
@@ -308,7 +308,7 @@ void chat_command(){
     create_srv_socket_tcp(server.port);
     send_opcode_recv_ack(CHAT_OPCODE);
     sleep(1);
-    send_int(my_device.id, server);
+    send_int(my_device.id, server.sd);
 
     // send_message(&server, username);
 
@@ -326,7 +326,7 @@ void out_command(){
     sleep(1);
 
     //change it to ID base handsake
-    send_int(my_device.port, server);
+    send_int(my_device.port, server.sd);
     my_device.connected = false;    
     printf("[device] You are now offline!\n");
 

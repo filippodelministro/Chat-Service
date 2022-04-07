@@ -16,7 +16,7 @@ struct device{
     bool connected;
 
     struct tm* tv;
-    int id;
+    uint16_t id;
     char* username;
     char* password;
     // time_t
@@ -122,15 +122,14 @@ void read_command(){
 //handshake to get opcode; prompted in stdout
 uint16_t recv_opcode_send_ack(int sd){
     uint16_t op;
+    int t;
     if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
-
+    t = ntohs(op);
+    printf("\n[server] revc_prova: received opcode: %d\n", t);
     send(sd, (void*)&op, sizeof(uint16_t), 0);           //send ACK
-    
-    op = ntohs(op);
-    printf("\n[server] revc_opcode_send_ack: received opcode: %d\n", op);
     return op;
 }
 
@@ -280,23 +279,6 @@ int get_id_set_sd(int sd){
     return ret;
 }
 
-int recv_int(struct device d){
-    int num;
-    uint16_t num_;
-    if(!recv(d.sd, (void*)&num_, sizeof(uint16_t), 0)){
-        perror("[server]: Error recv: \n");
-        exit(-1);
-    }
-    
-    num = ntohs(num_);
-    printf("\n[server] revc_int: received num: %d\n", num);
-    return num;
-}
-
-void send_int(int i, struct device d){
-    uint16_t p = htons(i);
-    send(d.sd, (void*)&p, sizeof(uint16_t), 0);
-}
 ////////////////////////////////////////////////////////////////////////
 
 //to do                 ???
@@ -327,6 +309,7 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
+    // opcode = recv_opcode_send_ack(new_dev);
     opcode = recv_opcode_send_ack(new_dev);
     printf("opcode: %d\n", opcode);
 
@@ -334,6 +317,7 @@ void handle_request(){
     switch (opcode){
     case 0:                                                     
         //SIGNUP BRANCH
+       
 
         //recevive username and password
         if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -346,14 +330,9 @@ void handle_request(){
         strcpy(password, strtok(NULL, DELIMITER));
         ret = add_dev(username, password);
 
-        //!!!!!!!!!
-        //mando il dev_id al client
-        //send_int(ret, devices[ret]);      <=== fa la stessa cosa
-        //mando sempre 1 per provare sta cazzo di send
-        uint16_t t = htons(10/*ret*/);   // => dovrebbe arrivare sempre 
-        send(new_dev, (void*)&t, sizeof(uint16_t), 0);  
-        printf("Mandato un 1 per prova!\nGuarda il device in \n\t[device] Received dev_id: <...>\n");
-        //!!!!!!!!!
+        // send_int(ret, devices[new_dev]);
+        recv_prova(new_dev);
+        
 
         prompt();
 
@@ -377,7 +356,7 @@ void handle_request(){
         printf("IN: got id = %d\n", id);
 
         //receive port
-        port = recv_int(devices[id]);
+        port = recv_int(new_dev);
         printf("IN: got port = %d\n", port);
 
         //add device to list and connect          
