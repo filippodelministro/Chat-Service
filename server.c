@@ -311,10 +311,8 @@ void handle_request(){
         strcpy(password, strtok(NULL, DELIMITER));
         ret = add_dev(username, password);
 
-        //!!!!!!!!!
-        //send dev_id to device
+        //send dev_id 
         send_int(ret, new_dev);
-        //!!!!!!!!!
 
         prompt();
 

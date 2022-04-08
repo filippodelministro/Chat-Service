@@ -198,10 +198,8 @@ void signup_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
-    //!!!!!!!!!
     //receive dev_id from server
     int dev_id = recv_int(server.sd);
-    //!!!!!!!!!
 
     //update device structure with dev_id get from server
     dev_init(dev_id, username, password);
