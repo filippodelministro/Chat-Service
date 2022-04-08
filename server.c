@@ -16,6 +16,7 @@ struct device{
     bool connected;
 
     struct tm* tv;
+    int id;
     char* username;
     char* password;
     // time_t
@@ -47,20 +48,20 @@ void help_command(){
 void list_command(){
     int i;
 
-    printf("\n[server] list_command: %u devices registered>\n", n_dev);
+    printf("\n[server] list_command: %u devices registered, %d connected>\n", n_dev, n_conn);
     if(!n_conn){
         printf("\tThere are no devices connected!\n");
     }
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\tsocket\n");
+    printf("\tdev_id\tusername\ttimestamp\tport\n");
         for(i=0; i<n_dev; i++){
 
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t#%d)\t%s\t\t%d:%d:%d\t%d\t%d\n",
-                    i, d->username, 
+                printf("\t%d\t%s\t\t%d:%d:%d\t%d\n",
+                    d->id, d->username, 
                     d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
-                    d->port, d->sd
+                    d->port
                 );
             }
         }
@@ -78,8 +79,7 @@ void esc_command(){
 ///                              UTILITY                               ///
 //////////////////////////////////////////////////////////////////////////
 
-void prompt()
-{
+void prompt(){
 	printf("\n> ");
     fflush(stdout);
 }    
@@ -119,38 +119,37 @@ void read_command(){
 //////////////////////////////////////////////////////////////////////////
 
 //handshake to get opcode; prompted in stdout
-uint16_t recv_opcode_send_ack(int sd){
+uint16_t recv_opcode(int sd){
     uint16_t op;
     if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
         perror("[server]: Error recv: \n");
         exit(-1);
     }
 
-    send(sd, (void*)&op, sizeof(uint16_t), 0);           //send ACK
-    
     op = ntohs(op);
-    printf("\n[server] revc_opcode_send_ack: received opcode: %d\n", op);
+    printf("\n[server] revc_opcode: %d\n", op);
     return op;
 }
-
+    
 //add deviceto devices list: return dev_id or -1 if not possible to add
-int add_dev(int sd, struct sockaddr_in addr, const char* usr, const char* pswd){
+int add_dev(const char* usr, const char* pswd){
     
     if(n_dev >= MAX_DEVICES)
         return -1;
 
     struct device* d = &devices[n_dev];
 
+    d->id = n_dev;
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
-    strncpy(d->username, usr, sizeof(usr));
-    strncpy(d->password, pswd, sizeof(usr));
+    strcpy(d->username, usr);
+    strcpy(d->password, pswd);
 
     printf("[server] add_dev: added new device! \n"
                     "\t dev_id: %d\n"
                     "\t username: %s\n"
                     "\t password: %s\n",
-                    n_dev, d->username, d->password
+                    d->id, d->username, d->password
     );
     return n_dev++;
 }
@@ -201,6 +200,7 @@ int find_device_from_port(int port){
 //check if device is registred then connect device to network
 bool check_and_connect(int sd, int po, const char* usr, const char* pswd){
     
+    //make ID based             ???
     int dev_id = find_device(usr, pswd);
     if(dev_id == -1){
         printf("[server] check_and_connect: device not found!\n");
@@ -262,48 +262,6 @@ void create_tcp_socket(char* port){
     printf("[server] create_tcp_socket: waiting for connection...\n");
 }
 
-void send_int_recv_ack(int i, struct device d){
-    //send opcode to server
-    uint16_t num = htons(i);
-    printf("[device] send_int_recv_ack: send \n\ti: %d\nnum: %d\n\t", i, num);
-    send(d.sd, (void*)&num, sizeof(uint16_t), 0);
-
-    //receive akc to proceed
-    recv(d.sd, (void*)&num, sizeof(uint16_t), 0);
-    i = ntohs(num);
-    int ii = ntohs(num);
-    printf("[device] send_int_recv_ack: Received acknoledge: \n\tii:%d\n\tnum:", ii, num);
-}
-
-int get_id(int sd){
-    int ret;
-    uint16_t ret_;
-    if(!recv(sd, (void*)&ret_, sizeof(uint16_t), 0)){
-            printf("[server] Error recv!\n");
-            exit(-1);
-        }
-    ret = ntohs(ret_);
-    printf("[server] get_id: %d\n", ret);
-    return ret;
-}
-
-int recv_int(struct device d){
-    uint16_t num;
-    int t;
-    if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
-        perror("[server]: Error recv: \n");
-        exit(-1);
-    }
-    
-    t = ntohs(num);
-    printf("\n[server] revc_int_send_ack: received num: %d\n", t);
-    return t;
-}
-
-void send_int(int i, struct device d){
-    uint16_t p = htons(i);
-    send(d.sd, (void*)&p, sizeof(uint16_t), 0);
-}
 ////////////////////////////////////////////////////////////////////////
 
 //to do                 ???
@@ -334,12 +292,14 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    opcode = recv_opcode_send_ack(new_dev);
+    opcode = recv_opcode(new_dev);
     printf("opcode: %d\n", opcode);
 
     //semmai fare una fork() qui ???
     switch (opcode){
-    case 0:                                                     //signup command
+    case 0:                                                     
+        //SIGNUP BRANCH
+
         //recevive username and password
         if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
             perror("[server]: Error recv: \n");
@@ -349,22 +309,19 @@ void handle_request(){
         //add device to device list
         strcpy(username, strtok(buffer, DELIMITER));
         strcpy(password, strtok(NULL, DELIMITER));
-        ret = add_dev(new_dev, new_addr, username, password);
+        ret = add_dev(username, password);
 
         //!!!!!!!!!
-        //mando il dev_id al client
-        //send_int(ret, devices[ret]);      <=== fa la stessa cosa
-        //mando sempre 1 per provare sta cazzo di send
-        uint16_t t = htons(1/*ret*/);   // => dovrebbe arrivare sempre 
-        send(new_dev, (void*)&t, sizeof(uint16_t), 0);  
-        printf("Mandato un 1 per prova!\nGuarda il device in \n\t[device] Received dev_id: <...>\n");
+        //send dev_id to device
+        send_int(ret, new_dev);
         //!!!!!!!!!
 
         prompt();
 
         close(new_dev);
         break;
-    case 1:                                                     //in command
+    case 1:                            
+        //IN BRANCH              
 
         //recevive username and password
         if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -375,51 +332,40 @@ void handle_request(){
         //split buffer in two string: username and password
         strcpy(username, strtok(buffer, DELIMITER));
         strcpy(password, strtok(NULL, DELIMITER));
-        sleep(1);
 
-        //receive port
-        uint16_t p;
-        if(!recv(new_dev, (void*)&p, sizeof(uint16_t), 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-        port = ntohs(p);
-        printf("received port: %d\n", port);
+        //receive id & port
+        id = recv_int(new_dev);
+        printf("IN: got id = %d\n", id);
+        port = recv_int(new_dev);
+        printf("IN: got port = %d\n", port);
 
         //add device to list and connect          
-        ret = check_and_connect(new_dev, port, username, password);
+        if(!check_and_connect(new_dev, port, username, password)){
+            //device not found: send error message
+            // send_int(-1, new_dev);
+        }
         
+        //send pendant msgs to device
+        //send_int(ret, devices[ret]);
+
         close(new_dev);
         prompt();
         break;
 
     case 2:
+        //HANGING BRANCH
         printf("HANGING BRANCH!\n");
-
-        // id = get_id(new_dev);
-        // prompt();
-
 
         break;
 
     case 3:
+        //SHOW BRANCH
         printf("SHOW BRANCH!\n");
-
-        // id = get_id(new_dev);
-        // prompt();
 
         break;
 
     case 4:
         printf("CHAT BRANCH!\n");
-
-        id = get_id(new_dev);
-        int f = recv_int(devices[id]);
-        if(!recv(new_dev, (void*)&buffer, f, 0)){
-            printf("[server] Error recv!\n");
-            exit(-1);
-        }
-        printf("%s\n", buffer);
         
         prompt();
         break;
@@ -427,17 +373,12 @@ void handle_request(){
     case 5:
         printf("SHARE BRANCH!\n");
 
-        // id = get_id(new_dev);
-        // prompt();
-
-
         break;
 
     case 6:
         //change it to ID base handsake         <====
-        // id = get_id(new_dev);
+        // id = recv_int(new_dev);
         // prompt();
-
         //handsake to get device port
         if(!recv(new_dev, (void*)&ret_, sizeof(uint16_t), 0)){
             perror("[server]: Error recv: \n");
@@ -462,10 +403,9 @@ void handle_request(){
         n_conn--;
 
         list_command();
-        // close(new_dev);
         prompt();
-        
 
+        close(new_dev);
         break;
 
     default:

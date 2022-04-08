@@ -4,11 +4,11 @@ all: dev server
  
 # make rule per il client 
 client: dev.o 
-	gcc -Wall dev.o -o dev 
+	gcc -Wall dev.c -o dev 
  
 # make rule per il server 
 server: server.o 
-	gcc -Wall server.o -o server 
+	gcc -Wall server.c -o server 
  
  
 # pulizia dei file della compilazione (eseguito con ‘make clean’ da terminale) 
@@ -16,6 +16,6 @@ reset:
 	rm *o dev server
 
 gdb:
-	gcc -g -Wall dev.o -o dev
-	gcc -g -Wall server.o -o server 
+	gcc -g -Wall dev.c -o dev
+	gcc -g -Wall server.c  -o server 
  
