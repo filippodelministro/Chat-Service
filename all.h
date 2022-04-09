@@ -23,6 +23,8 @@
 #define SHARE_OPCODE        5
 #define OUT_OPCODE          6
 
+#define ERR_CODE            65535
+
 char* DELIMITER = "-";
 
 void send_int(int i, int sd){
@@ -39,7 +41,11 @@ int recv_int(int sd){
     }
     
     num = ntohs(num_);
-    printf("revc_int: received num %d\n", num);
+    if(num == ERR_CODE)
+        printf("revc_int: received ERR_CODE!\n");
+    else
+        printf("revc_int: received num %d\n", num);
+    
     return num;
 }
 
@@ -67,4 +73,9 @@ void recv_msg(int sd, char* ret){
 
     strcpy(ret, buf);
     ret = buf;
+}
+
+void prompt(){
+	printf("\n> ");
+    fflush(stdout);
 }

@@ -41,11 +41,6 @@ int fdmax;
 ///                              UTILITY                               ///
 //////////////////////////////////////////////////////////////////////////
 
-void prompt(){
-	printf("\n> ");
-    fflush(stdout);
-}
-
 //prompt a boot message on stdout
 void boot_message(){
     printf("**********************PEER %d**********************\n", my_device.port);
@@ -105,26 +100,6 @@ void send_opcode(int op){
     send_int(op, server.sd);
 }
 
-/*
-void send_int(int i, struct device d){
-    printf("[device] send_int: sending '%d'\n", i);
-    uint16_t p = htons(i);
-    send(d.sd, (void*)&p, sizeof(uint16_t), 0);
-}
-
-int recv_int(struct device d){
-    uint16_t num;
-    if(!recv(d.sd, (void*)&num, sizeof(uint16_t), 0)){
-        perror("[device]: Error recv: \n");
-        exit(-1);
-    }
-
-    int t = ntohs(num);
-    printf("[device] revc_int: received '%d'\n", t);
-    return t;
-}
-*/
-
 //initialize my_device structure with usr/pswd get by user & dev_id get server
 void dev_init(int id, const char* usr, const char* pswd){
     
@@ -144,7 +119,6 @@ void dev_init(int id, const char* usr, const char* pswd){
     );
 }
 
-//to do???
 //What a device user can use to interact with device
 //////////////////////////////////////////////////////////////////////////
 ///                              COMMAND                               ///
@@ -160,7 +134,6 @@ void help_command(){
             "5) out       --> ??\n"
     );
 }
-//to do         ???
 
 void signup_command(){
 
@@ -198,7 +171,7 @@ void signup_command(){
     strcat(buffer, password);
     send(server.sd, buffer, strlen(buffer), 0);
 
-    //receive dev_id from server
+    //receive dev_id
     int dev_id = recv_int(server.sd);
 
     //update device structure with dev_id get from server
@@ -214,6 +187,7 @@ void in_command(){
     char username[1024];
     char password[1024];
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, sizeof(buffer));
 
     //get data from stdin
     printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
@@ -249,18 +223,18 @@ void in_command(){
     send_int(my_device.port, server.sd);
 
     //get pend_msgs from server
-    //my_device.msg_pend = recv_int(server);
-    // if(my_device.msg_pend == -1){
-    //     printf("[device] Error in authentication!\n");
-    //     exit(-1);
-    //     return;
-    // }
+    my_device.msg_pend = recv_int(server.sd);
+    if(my_device.msg_pend == ERR_CODE){
+        printf("[device] Error in authentication: check usr or pswd and retry\n");
+        close(server.sd);
+        return;
+    }
 
     //complete: device is now online
     my_device.connected = true;
     printf("[device] You are now online!\n");
-    memset(buffer, 0, sizeof(buffer));
     
+    memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
@@ -271,7 +245,12 @@ void hanging_command(){
     create_srv_socket_tcp(server.port);
     send_opcode(HANGING_OPCODE);
     sleep(1);
-    // send_int(my_device.id, server);
+
+    send_int(my_device.id, server.sd);
+
+    prompt();
+    memset(buffer, 0, sizeof(buffer));
+    close(server.sd);
 }
 
 void show_command(){
@@ -314,19 +293,18 @@ void out_command(){
     send_opcode(OUT_OPCODE);
     sleep(1);
 
-    //change it to ID base handsake
-    send_int(my_device.port, server.sd);
-    my_device.connected = false;    
-    printf("[device] You are now offline!\n");
+    //send dev_id to server
+    send_int(my_device.id, server.sd);
 
+    //check for autentication (send)
+        //[...]
+    
     //wait ACK from server to safe disconnect
-    /*
-    if(recv_int(server) == my_device.sd){
+    if(recv_int(server.sd) == my_device.sd){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
     else printf("[device] out_command: Error! Device not online!\n");
-    */
 
     close(server.sd);
 }

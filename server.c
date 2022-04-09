@@ -79,11 +79,6 @@ void esc_command(){
 ///                              UTILITY                               ///
 //////////////////////////////////////////////////////////////////////////
 
-void prompt(){
-	printf("\n> ");
-    fflush(stdout);
-}    
-
 void boot_message(){
     printf("**********************SERVER STARTED**********************\n");
     help_command();
@@ -111,7 +106,6 @@ void read_command(){
     }
     prompt();
 }
-
 
 //Function called by the server so manage socket and interaction with devices
 //////////////////////////////////////////////////////////////////////////
@@ -198,32 +192,36 @@ int find_device_from_port(int port){
 }
 
 //check if device is registred then connect device to network
-bool check_and_connect(int sd, int po, const char* usr, const char* pswd){
-    
-    //make ID based             ???
-    int dev_id = find_device(usr, pswd);
-    if(dev_id == -1){
-        printf("[server] check_and_connect: device not found!\n");
-        return false;
+bool check_and_connect(int id, int po, const char* usr, const char* pswd){
+    struct device* d = &devices[id];
+    printf("check_and_connect: checking for device #%d\n"
+        "\tusr: %s\n"
+        "\tpswd: %s\n", 
+        id, usr, pswd
+    );
+
+    if(!strcmp(d->username, usr) && !strcmp(d->password, pswd)){
+   
+        printf("check_and_connect: authentication success!\n");
+        
+        //if here device is found
+        d->port = po;
+
+        //handle timestamp
+        time_t rawtime;
+        time(&rawtime);
+        d->tv = localtime(&rawtime);
+        
+        d->connected = true;
+        n_conn++;
+
+        //show network info
+        list_command();
+        return true;
     }
 
-    printf("[server] check_and_connect: found device %d \n", dev_id);
-    //if here device is found
-    struct device* d = &devices[dev_id];
-    d->sd = sd;
-    d->port = po;
-
-    //handle timestamp
-    time_t rawtime;
-    time(&rawtime);
-    d->tv = localtime(&rawtime);
-    
-    d->connected = true;
-    n_conn++;
-
-    //show network info
-    list_command();
-    return true;
+    printf("[server] check_and_connect: authentication failed!\n");
+    return false;
 }
 
 void fdt_init(){
@@ -277,7 +275,7 @@ void handle_request(){
 
     char buffer[BUFFER_SIZE];
     int ret;
-    uint16_t ret_;
+    // uint16_t ret_;
     // pid_t pid;
 
     //tell which command to do
@@ -292,7 +290,8 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    opcode = recv_opcode(new_dev);
+    // opcode = recv_opcode(new_dev);
+    opcode = recv_int(new_dev);
     printf("opcode: %d\n", opcode);
 
     //semmai fare una fork() qui ???
@@ -314,9 +313,9 @@ void handle_request(){
         //send dev_id 
         send_int(ret, new_dev);
 
-        prompt();
-
+        memset(buffer, 0, sizeof(buffer));
         close(new_dev);
+        prompt();
         break;
     case 1:                            
         //IN BRANCH              
@@ -333,19 +332,21 @@ void handle_request(){
 
         //receive id & port
         id = recv_int(new_dev);
-        printf("IN: got id = %d\n", id);
+        // printf("IN: got id = %d\n", id);
         port = recv_int(new_dev);
-        printf("IN: got port = %d\n", port);
+        // printf("IN: got port = %d\n", port);
 
         //add device to list and connect          
-        if(!check_and_connect(new_dev, port, username, password)){
+        if(!check_and_connect(id, port, username, password)){
             //device not found: send error message
-            // send_int(-1, new_dev);
+            send_int(ERR_CODE, new_dev);
+            
         }
-        
         //send pendant msgs to device
-        //send_int(ret, devices[ret]);
+        else
+            send_int(13, new_dev);
 
+        memset(buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
@@ -374,36 +375,25 @@ void handle_request(){
         break;
 
     case 6:
-        //change it to ID base handsake         <====
-        // id = recv_int(new_dev);
-        // prompt();
-        //handsake to get device port
-        if(!recv(new_dev, (void*)&ret_, sizeof(uint16_t), 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-        port = ntohs(ret_);
-        printf("received port: %d\n", port);
+        //get id from device
+        id = recv_int(new_dev);
+        printf("id ricevuto: %d", id);
 
-        // find device and disconnect from network
-        id = find_device_from_port(port);
-        if(id == -1){
-            printf("[sever] handle_request: device not found!\n");
-            break;
-        }
-        printf("id trovato: %d", id);
+        //check for autentichation (recv)
+            //[...]
 
         //send ACK to safe disconnect
-        //send_int(id, devices[id]);            <====
+        send_int(id, new_dev);            
         
         struct device* d = &devices[id];
         d->connected = false;
         n_conn--;
 
         list_command();
-        prompt();
 
+        memset(buffer, 0, sizeof(buffer));
         close(new_dev);
+        prompt();
         break;
 
     default:
