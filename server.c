@@ -68,6 +68,7 @@ void list_command(){
     }
 }
 
+
 //to do         ???
 void esc_command(){
     printf("ESC COMMAND ESEGUITO\n");
