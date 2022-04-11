@@ -114,6 +114,7 @@ void read_command(){
 //////////////////////////////////////////////////////////////////////////
 
 //handshake to get opcode; prompted in stdout
+/*
 uint16_t recv_opcode(int sd){
     uint16_t op;
     if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
@@ -125,6 +126,7 @@ uint16_t recv_opcode(int sd){
     printf("\n[server] revc_opcode: %d\n", op);
     return op;
 }
+*/
     
 bool usr_exists(const char* usr){
     int i;
@@ -208,7 +210,7 @@ int find_device_from_port(int port){
 }
 
 //check if device is registred then connect device to network
-bool check_and_connect(int id, int po, const char* usr, const char* pswd){
+int check_and_connect(int id, int po, const char* usr, const char* pswd){
     struct device* d = &devices[id];
     printf("check_and_connect: checking for device #%d\n"
         "\tusr: %s\n"
@@ -233,11 +235,11 @@ bool check_and_connect(int id, int po, const char* usr, const char* pswd){
 
         //show network info
         list_command();
-        return true;
+        return id;
     }
 
     printf("[server] check_and_connect: authentication failed!\n");
-    return false;
+    return ERR_CODE;
 }
 
 void fdt_init(){
@@ -353,13 +355,8 @@ void handle_request(){
         // printf("IN: got port = %d\n", port);
 
         //add device to list and connect          
-        if(!check_and_connect(id, port, username, password)){
-            //device not found: send error message
-            send_int(ERR_CODE, new_dev);
-            
-        }
-        else
-            send_int(id, new_dev);  //sending something ack connection
+        ret = check_and_connect(id, port, username, password);
+        send_int(ret, new_dev);           
 
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);
