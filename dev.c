@@ -173,6 +173,12 @@ void signup_command(){
 
     //receive dev_id
     int dev_id = recv_int(server.sd);
+    if(dev_id == ERR_CODE){
+        printf("[device] Error in signup: username '%s' not available!\n", username);
+        close(server.sd);
+        exit(-1);
+        return;
+    }
 
     //update device structure with dev_id get from server
     dev_init(dev_id, username, password);
@@ -222,9 +228,8 @@ void in_command(){
     printf("sending port: %d\n", my_device.port);
     send_int(my_device.port, server.sd);
 
-    //get pend_msgs from server
-    my_device.msg_pend = recv_int(server.sd);
-    if(my_device.msg_pend == ERR_CODE){
+    //receiving sometihing to ack connection
+    if(recv_int(server.sd) == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
         return;

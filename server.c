@@ -126,11 +126,26 @@ uint16_t recv_opcode(int sd){
     return op;
 }
     
+bool usr_exists(const char* usr){
+    int i;
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(!strcmp(d->username, usr))
+            return true;    
+    }
+
+    return false;
+}
+
 //add deviceto devices list: return dev_id or -1 if not possible to add
 int add_dev(const char* usr, const char* pswd){
     
     if(n_dev >= MAX_DEVICES)
-        return -1;
+        return ERR_CODE;
+
+    if(usr_exists(usr))
+        return ERR_CODE;
 
     struct device* d = &devices[n_dev];
 
@@ -343,9 +358,8 @@ void handle_request(){
             send_int(ERR_CODE, new_dev);
             
         }
-        //send pendant msgs to device
         else
-            send_int(13, new_dev);
+            send_int(id, new_dev);  //sending something ack connection
 
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);
@@ -355,6 +369,8 @@ void handle_request(){
     case 2:
         //HANGING BRANCH
         printf("HANGING BRANCH!\n");
+
+        
 
         break;
 
