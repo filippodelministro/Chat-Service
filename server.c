@@ -113,21 +113,7 @@ void read_command(){
 ///                             FUNCTION                               ///
 //////////////////////////////////////////////////////////////////////////
 
-//handshake to get opcode; prompted in stdout
-/*
-uint16_t recv_opcode(int sd){
-    uint16_t op;
-    if(!recv(sd, (void*)&op, sizeof(uint16_t), 0)){
-        perror("[server]: Error recv: \n");
-        exit(-1);
-    }
-
-    op = ntohs(op);
-    printf("\n[server] revc_opcode: %d\n", op);
-    return op;
-}
-*/
-    
+//check if usr account already exists    
 bool usr_exists(const char* usr){
     int i;
     for(i=0; i<n_dev; i++){
@@ -167,14 +153,14 @@ int add_dev(const char* usr, const char* pswd){
 }
 
 //look for device from username and password
-int find_device(const char* usr, const char* pswd){
+int find_device(const char* usr){
     int i;
 
     printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
         
-        if(!strcmp(d->username, usr) && !strcmp(d->password, pswd))
+        if(!strcmp(d->username, usr))
             return i;    
     }
 
@@ -350,8 +336,8 @@ void handle_request(){
 
         //receive id & port
         id = recv_int(new_dev);
-        // printf("IN: got id = %d\n", id);
         port = recv_int(new_dev);
+        // printf("IN: got id = %d\n", id);
         // printf("IN: got port = %d\n", port);
 
         //add device to list and connect          
@@ -378,8 +364,18 @@ void handle_request(){
         break;
 
     case 4:
+        //CHAT BRANCH
         printf("CHAT BRANCH!\n");
-        
+
+        int id_sender, id_receiver;
+        id_sender = recv_int(new_dev);
+        recv_msg(new_dev, username);
+
+        id_receiver =  find_device(username);
+
+        printf("[server] received:\n\t%s\n\t%d\n", username, id_receiver);
+
+
         prompt();
         break;
 
@@ -433,7 +429,7 @@ int main(int argc, char** argv){
     //create socket to get request
 	create_tcp_socket(argv[1]);
 	
-    //Initialise set structure 
+    //Init set structure 
 	fdt_init();
 
 	FD_SET(listening_socket, &master);

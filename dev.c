@@ -95,8 +95,6 @@ void create_srv_socket_tcp(int p){
 void send_opcode(int op){
     //send opcode to server
     printf("[device] send opcode %d to server...\n", op);
-    // uint16_t opcode = htons(op);
-    // send(server.sd, (void*)&opcode, sizeof(uint16_t), 0);
     send_int(op, server.sd);
 }
 
@@ -270,15 +268,20 @@ void show_command(){
 }
 
 void chat_command(){
-    // char* username;
-    // scanf("%s", username);
- 
+    char username[1024];
+    scanf("%s", username);
+
     //first handshake
     create_srv_socket_tcp(server.port);
     send_opcode(CHAT_OPCODE);
     sleep(1);
-    // send_int(my_device.id, server);
+    send_int(my_device.id, server.sd);
 
+    //sending chat info
+    send_msg(username, server.sd);
+    
+    
+    
     printf("COMANDO CHAT ESEGUITO \n");
 }
 
@@ -364,7 +367,6 @@ void read_command(){
             else boot_message();
     }						
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 ///                             MAIN                                   ///

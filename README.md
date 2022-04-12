@@ -1,12 +1,9 @@
 # Reti_Project
 ###### Network's Course Project for _University of Pisa_
-The project's goal is to create a working network chat service in which users can send/receive messages and share files using chat.
-Users cn
-
-Users can ask the server to open a new chat with a specific user,
+The project's aim is to create a working network chat service in which users can send/receive messages and share files using chat.
+Users can ask for a new chat to server which manage all the online users, linking them for the first time; once linked, devices can chat and share file with other users. They can also join a new groupchat if they `chat` with a user who already has started a chat. 
 
 ---
-
 
 #### DEVICE 
 
@@ -40,8 +37,8 @@ Users can ask the server to open a new chat with a specific user,
 _Note:_ this does not make users offline; from now on they can just use already existing chat, and not creating new ones.
 
 ---
-
-#### Structure of the project 
+---
+#### Structure of the project [W.I.P.]
 The projet has two main file which both inlcude an "all.h" file: here all defined all the libraries and data structure for socket programming.
 The two main file are
     - server.c 
