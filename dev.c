@@ -92,6 +92,30 @@ void create_srv_socket_tcp(int p){
     // printf("[device] create_srv_tcp_socket: waiting for connection...\n");
 }
 
+void create_listening_socket_tcp(){
+
+    //create
+    if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("[device] socket() error");
+        exit(-1);
+    }
+
+    //address
+    memset(&my_device.addr, 0, sizeof(my_device.addr));
+    my_device.addr.sin_family = AF_INET;
+    my_device.addr.sin_port = htons(my_device.port);
+    my_device.addr.sin_addr.s_addr = INADDR_ANY;
+    // inet_pton(AF_INET, "127.0.0.1", &server.addr.sin_addr);
+
+    if(bind(listening_socket, (struct sockaddr*)&my_device.addr, sizeof(my_device.addr)) == -1){
+        perror("[server] Error bind: \n");
+        exit(-1);
+    }
+
+    listen(listening_socket, MAX_DEVICES);
+
+}
+
 void send_opcode(int op){
     //send opcode to server
     printf("[device] send opcode %d to server...\n", op);
@@ -233,6 +257,10 @@ void in_command(){
         return;
     }
 
+    // create_listening_socket_tcp();
+    // FD_SET(listening_socket, &master);
+    // if(listening_socket > fdmax){ fdmax = listening_socket; }
+
     //complete: device is now online
     my_device.connected = true;
     printf("[device] You are now online!\n");
@@ -279,7 +307,6 @@ void chat_command(){
 
     //sending chat info
     send_msg(username, server.sd);
-    
     
     
     printf("COMANDO CHAT ESEGUITO \n");
@@ -417,17 +444,17 @@ int main(int argc, char* argv[]){
                 else if(i == listening_socket){
                     //connection request
 
-                    printf("[server]> Connection request");
+                    i = recv_int(server.sd);
+
+                    printf("[device] TEST: received %d\n", i);
                 }
                 
                 else if(i == server.sd){
                     //connection request by server
-                    /*
-                    //list
-                    recv(server.sd, buffer, BUFFER_SIZE, 0);
-                    printf("%s\n", buffer);
-                    send(server.sd, buffer, sizeof(buffer), 0);
-                    */
+                    i = recv_int(server.sd);
+
+                    printf("[device] TEST: received %d\n", i);
+
                 }
 
                 //clear buffer and prompt

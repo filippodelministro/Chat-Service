@@ -372,9 +372,14 @@ void handle_request(){
         recv_msg(new_dev, username);
 
         id_receiver =  find_device(username);
+        printf("[server] chat request:\n"
+            "\tsender_id: %d\n"
+            "\treceiver_id: %d\n",
+            id_sender, id_receiver
+        );
 
-        printf("[server] received:\n\t%s\n\t%d\n", username, id_receiver);
-
+        send_int(23, devices[id_receiver].sd);
+        printf("TEST: send 23\n");       
 
         prompt();
         break;
