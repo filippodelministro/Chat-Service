@@ -367,19 +367,27 @@ void handle_request(){
         //CHAT BRANCH
         printf("CHAT BRANCH!\n");
 
+        //receive sender & receiver info
         int id_sender, id_receiver;
         id_sender = recv_int(new_dev);
         recv_msg(new_dev, username);
 
-        id_receiver =  find_device(username);
-        printf("[server] chat request:\n"
-            "\tsender_id: %d\n"
-            "\treceiver_id: %d\n",
-            id_sender, id_receiver
-        );
+        id_receiver = find_device(username);
 
-        send_int(23, devices[id_receiver].sd);
-        printf("TEST: send 23\n");       
+        int CODE = OK_CODE;
+        if(id_receiver == -1){
+            CODE = ERR_CODE;
+            printf("[server] receiver does not exist...\nsending ERR_CODE\n");    
+        }
+        else{
+            printf("[server] chat request:\n"
+                "\tsender_id: %d\n"
+                "\treceiver_id: %d\n",
+                id_sender, id_receiver
+            );
+        }
+        //check if receiver is online
+        send_int(CODE, new_dev);
 
         prompt();
         break;

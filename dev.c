@@ -307,8 +307,11 @@ void chat_command(){
 
     //sending chat info
     send_msg(username, server.sd);
-    
-    
+
+    if(recv_int(server.sd) == ERR_CODE){
+        printf("[device] username %s does not exists!\n", username);
+    }
+        
     printf("COMANDO CHAT ESEGUITO \n");
 }
 

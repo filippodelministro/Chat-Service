@@ -24,6 +24,7 @@
 #define OUT_OPCODE          6
 
 #define ERR_CODE            65535
+#define OK_CODE             65534
 
 char* DELIMITER = "-";
 
@@ -41,10 +42,9 @@ int recv_int(int sd){
     }
     
     num = ntohs(num_);
-    if(num == ERR_CODE)
-        printf("revc_int: received ERR_CODE!\n");
-    else
-        printf("revc_int: received num %d\n", num);
+    if(num == ERR_CODE){ printf("revc_int: received ERR_CODE!\n"); }
+    else if (num == OK_CODE) { printf("recv_int: received OK_CODE!\n"); }
+    else { printf("revc_int: received num %d\n", num); }
     
     return num;
 }
