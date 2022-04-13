@@ -1,7 +1,7 @@
 # Reti_Project
 ###### Network's Course Project for _University of Pisa_
 The project's aim is to create a working network chat service in which users can send/receive messages and share files using chat.
-Users can ask for a new chat to server which manage all the online users, linking them for the first time; once linked, devices can chat and share file with other users. They can also join a new groupchat if they `chat` with a user who already has started a chat. 
+Users can ask for a new chat to the server which manage all the online users, linking them for the first time; once linked, devices can chat and share file with other users. They can also join a new groupchat if they `chat` with a user who already has started a chat. 
 
 ---
 
