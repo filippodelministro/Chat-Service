@@ -257,9 +257,9 @@ void in_command(){
         return;
     }
 
-    // create_listening_socket_tcp();
-    // FD_SET(listening_socket, &master);
-    // if(listening_socket > fdmax){ fdmax = listening_socket; }
+    create_listening_socket_tcp();
+    FD_SET(listening_socket, &master);
+    if(listening_socket > fdmax){ fdmax = listening_socket; }
 
     //complete: device is now online
     my_device.connected = true;
@@ -308,11 +308,19 @@ void chat_command(){
     //sending chat info
     send_msg(username, server.sd);
 
+    //handshake: check if registered & if online
     if(recv_int(server.sd) == ERR_CODE){
-        printf("[device] username %s does not exists!\n", username);
+        printf("[device] user '%s' does not exists!\n", username);
+        goto chat_end;
     }
-        
+    if(recv_int(server.sd) == ERR_CODE){
+        printf("[device] user '%s' is not online: sending messages to server!\n", username);
+    }
+
+    
+    chat_end:
     printf("COMANDO CHAT ESEGUITO \n");
+    close(server.sd);
 }
 
 void share_command(){

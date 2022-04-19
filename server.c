@@ -152,7 +152,7 @@ int add_dev(const char* usr, const char* pswd){
     return n_dev++;
 }
 
-//look for device from username and password
+//look for device from username
 int find_device(const char* usr){
     int i;
 
@@ -374,10 +374,11 @@ void handle_request(){
 
         id_receiver = find_device(username);
 
-        int CODE = OK_CODE;
+        //check if receiver is registered
         if(id_receiver == -1){
-            CODE = ERR_CODE;
             printf("[server] receiver does not exist...\nsending ERR_CODE\n");    
+            send_int(ERR_CODE, new_dev);
+            goto chat_end;
         }
         else{
             printf("[server] chat request:\n"
@@ -385,10 +386,22 @@ void handle_request(){
                 "\treceiver_id: %d\n",
                 id_sender, id_receiver
             );
+            send_int(OK_CODE, new_dev);
         }
-        //check if receiver is online
-        send_int(CODE, new_dev);
 
+        //check if receiver is online
+        if(devices[id_receiver].connected){
+            //device is online
+            printf("[server] receiver is online...\nsending OK_CODE\n");    
+            send_int(OK_CODE, new_dev);
+        }
+        else{
+            //device is not online: server have to manage msgs
+            printf("[server] receiver is not online: saving messages from sender\n");    
+            send_int(ERR_CODE, new_dev);
+        }
+
+    chat_end:
         prompt();
         break;
 
@@ -468,11 +481,11 @@ int main(int argc, char** argv){
     
             if(FD_ISSET(i, &read_fds)){
 
-                //keyboard                     (1)
+                //keyboard                     
                 if(i == 0)                      
                     read_command();     
 
-                //deveices request             (2)
+                //deveices request             
                 if(i == listening_socket)  
                     handle_request();
             }	
