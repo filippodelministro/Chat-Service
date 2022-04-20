@@ -53,15 +53,16 @@ void list_command(){
         printf("\tThere are no devices connected!\n");
     }
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\n");
+    printf("\tdev_id\tusername\ttimestamp\tport\tsocket\n");
         for(i=0; i<n_dev; i++){
 
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t%d\t%s\t\t%d:%d:%d\t%d\n",
+                printf("\t%d\t%s\t\t%d:%d:%d\t%d\t%d\n",
                     d->id, d->username, 
                     d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
-                    d->port
+                    d->port,
+                    d->sd
                 );
             }
         }
@@ -340,9 +341,14 @@ void handle_request(){
         // printf("IN: got id = %d\n", id);
         // printf("IN: got port = %d\n", port);
 
-        //add device to list and connect          
+        //add device to list and connect       
         ret = check_and_connect(id, port, username, password);
-        send_int(ret, new_dev);           
+        //send ACK to connection (or ERR_CODE)
+        send_int(ret, new_dev);
+
+        //recv device's listening socket and update dev_descriptor
+        // ret = recv_int(new_dev);
+        // devices[id].sd = ret;
 
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);

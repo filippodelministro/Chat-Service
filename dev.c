@@ -257,9 +257,12 @@ void in_command(){
         return;
     }
 
-    create_listening_socket_tcp();
-    FD_SET(listening_socket, &master);
-    if(listening_socket > fdmax){ fdmax = listening_socket; }
+    // create_listening_socket_tcp();
+    // FD_SET(listening_socket, &master);
+    // if(listening_socket > fdmax){ fdmax = listening_socket; }
+
+    //send my listening_socket to server
+    // send_int(listening_socket, server.sd);
 
     //complete: device is now online
     my_device.connected = true;
@@ -346,7 +349,7 @@ void out_command(){
         //[...]
     
     //wait ACK from server to safe disconnect
-    if(recv_int(server.sd) == my_device.sd){
+    if(recv_int(server.sd) == my_device.id){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
