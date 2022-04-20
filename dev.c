@@ -250,7 +250,7 @@ void in_command(){
     printf("sending port: %d\n", my_device.port);
     send_int(my_device.port, server.sd);
 
-    //receiving sometihing to ack connection
+    //receiving ACK to connection
     if(recv_int(server.sd) == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);

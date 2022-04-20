@@ -204,7 +204,7 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         id, usr, pswd
     );
 
-    if(!strcmp(d->username, usr) && !strcmp(d->password, pswd)){
+    if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
    
         printf("check_and_connect: authentication success!\n");
         
