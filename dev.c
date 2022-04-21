@@ -113,7 +113,9 @@ void create_listening_socket_tcp(){
     }
 
     listen(listening_socket, MAX_DEVICES);
-
+    
+    FD_SET(listening_socket, &master);
+    if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
 
 void send_opcode(int op){
@@ -258,8 +260,6 @@ void in_command(){
     }
 
     create_listening_socket_tcp();
-    FD_SET(listening_socket, &master);
-    if(listening_socket > fdmax){ fdmax = listening_socket; }
 
     //complete: device is now online
     my_device.connected = true;
@@ -296,8 +296,9 @@ void show_command(){
 }
 
 void chat_command(){
-    char username[1024];
-    scanf("%s", username);
+    char r_username[1024];
+    int r_port;
+    scanf("%s", r_username);
 
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -306,17 +307,21 @@ void chat_command(){
     send_int(my_device.id, server.sd);
 
     //sending chat info
-    send_msg(username, server.sd);
+    send_msg(r_username, server.sd);
 
     //handshake: check if registered & if online
     if(recv_int(server.sd) == ERR_CODE){
-        printf("[device] user '%s' does not exists!\n", username);
+        printf("[device] user '%s' does not exists!\n", r_username);
         goto chat_end;
     }
-    if(recv_int(server.sd) == ERR_CODE){
-        printf("[device] user '%s' is not online: sending messages to server!\n", username);
-    }
 
+    r_port = recv_int(server.sd);
+    if(r_port == server.port){
+        printf("[device] user '%s' is not online: sending messages to server!\n", r_username);
+    }
+    else{
+        printf("%s's port: %d\n", r_username, r_port);    
+    }
     
     chat_end:
     printf("COMANDO CHAT ESEGUITO \n");
@@ -339,15 +344,11 @@ void out_command(){
     send_opcode(OUT_OPCODE);
     sleep(1);
 
-    //closing listener_socket   
     close(listening_socket);
     FD_CLR(listening_socket, &master);
 
     //send dev_id to server
     send_int(my_device.id, server.sd);
-
-    //check for autentication (send)
-        //[...]
     
     //wait ACK from server to safe disconnect
     if(recv_int(server.sd) == my_device.id){
@@ -459,16 +460,16 @@ int main(int argc, char* argv[]){
                 else if(i == listening_socket){
                     //connection request
 
-                    i = recv_int(server.sd);
+                    printf("\t\ti == listening_socket\n");
 
-                    printf("[device] TEST: received %d\n", i);
                 }
                 
                 else if(i == server.sd){
                     //connection request by server
-                    i = recv_int(server.sd);
+                    // i = recv_int(server.sd);
+                    // printf("[device] TEST: received %d\n", i);
 
-                    printf("[device] TEST: received %d\n", i);
+                    printf("\t\ti == server.sd\n");
 
                 }
 

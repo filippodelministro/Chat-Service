@@ -241,6 +241,8 @@ void fdt_init(){
 }
 
 void create_tcp_socket(char* port){
+    int p = atoi(port);
+    my_port = p;
 
     //crate socket
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -251,7 +253,7 @@ void create_tcp_socket(char* port){
     //create address
     memset(&my_addr, 0, sizeof(my_addr));
     my_addr.sin_family = AF_INET;
-    my_addr.sin_port = htons(atoi(port));
+    my_addr.sin_port = htons(p);
     my_addr.sin_addr.s_addr = INADDR_ANY;
 
     //linking address
@@ -295,7 +297,6 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    // opcode = recv_opcode(new_dev);
     opcode = recv_int(new_dev);
     printf("opcode: %d\n", opcode);
 
@@ -338,17 +339,10 @@ void handle_request(){
         //receive id & port
         id = recv_int(new_dev);
         port = recv_int(new_dev);
-        // printf("IN: got id = %d\n", id);
-        // printf("IN: got port = %d\n", port);
 
-        //add device to list and connect       
+        //add device to list and connect & sending ACK to connection      
         ret = check_and_connect(id, port, username, password);
-        //send ACK to connection (or ERR_CODE)
         send_int(ret, new_dev);
-
-        //recv device's listening socket and update dev_descriptor
-        // ret = recv_int(new_dev);
-        // devices[id].sd = ret;
 
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);
@@ -392,20 +386,14 @@ void handle_request(){
                 "\treceiver_id: %d\n",
                 id_sender, id_receiver
             );
+            //sending receiver's port
             send_int(OK_CODE, new_dev);
         }
 
-        //check if receiver is online
-        if(devices[id_receiver].connected){
-            //device is online
-            printf("[server] receiver is online...\nsending OK_CODE\n");    
-            send_int(OK_CODE, new_dev);
-        }
-        else{
-            //device is not online: server have to manage msgs
-            printf("[server] receiver is not online: saving messages from sender\n");    
-            send_int(ERR_CODE, new_dev);
-        }
+        //sending port: server_port if device is offline, device_port instead
+        int p = (devices[id_receiver].connected) ? devices[id_receiver].port : my_port;
+        send_int(p, new_dev);
+
 
     chat_end:
         prompt();
