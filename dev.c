@@ -257,12 +257,9 @@ void in_command(){
         return;
     }
 
-    // create_listening_socket_tcp();
-    // FD_SET(listening_socket, &master);
-    // if(listening_socket > fdmax){ fdmax = listening_socket; }
-
-    //send my listening_socket to server
-    // send_int(listening_socket, server.sd);
+    create_listening_socket_tcp();
+    FD_SET(listening_socket, &master);
+    if(listening_socket > fdmax){ fdmax = listening_socket; }
 
     //complete: device is now online
     my_device.connected = true;
@@ -341,6 +338,10 @@ void out_command(){
 
     send_opcode(OUT_OPCODE);
     sleep(1);
+
+    //closing listener_socket   
+    close(listening_socket);
+    FD_CLR(listening_socket, &master);
 
     //send dev_id to server
     send_int(my_device.id, server.sd);
