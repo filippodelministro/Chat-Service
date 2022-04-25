@@ -1,10 +1,10 @@
 #include "all.h"
 
-//////////////////////////////////////////////////////////////////////////
-///                             DECLARATION                            ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                             DECLARATION                             ///
+//* ///////////////////////////////////////////////////////////////////////
 
-//-----------     DEVICE    -----------------
+// -----------     DEVICE    -----------------
 struct device{
     int port;                   // port number       
     int sd;                     // TCP socket
@@ -37,9 +37,9 @@ fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
 //maybe in an unic extern file utility.c            ???
-//////////////////////////////////////////////////////////////////////////
-///                              UTILITY                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                                 UTILITY                             ///
+//* ///////////////////////////////////////////////////////////////////////
 
 //prompt a boot message on stdout
 void boot_message(){
@@ -51,9 +51,9 @@ void boot_message(){
 }
 
 //Function called by the server so manage socket and interaction with devices
-//////////////////////////////////////////////////////////////////////////
-///                             FUNCTION                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                             FUNCTIONS                               ///
+//* ///////////////////////////////////////////////////////////////////////
 
 void fdt_init(){
     FD_ZERO(&master);
@@ -93,8 +93,6 @@ void create_srv_socket_tcp(int p){
 }
 
 void create_listening_socket_tcp(){
-
-    //create
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("[device] socket() error");
         exit(-1);
@@ -144,9 +142,9 @@ void dev_init(int id, const char* usr, const char* pswd){
 }
 
 //What a device user can use to interact with device
-//////////////////////////////////////////////////////////////////////////
-///                              COMMAND                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                             COMMANDS                                ///
+//* ///////////////////////////////////////////////////////////////////////
 
 //prompt an help list message on stdout
 void help_command(){
@@ -315,14 +313,22 @@ void chat_command(){
         goto chat_end;
     }
 
+    //receive port: chat with server if recv_device is not online
     r_port = recv_int(server.sd);
     if(r_port == server.port){
         printf("[device] user '%s' is not online: sending messages to server!\n", r_username);
+            
+        //todo: check '\q ecc.' to exit chat
+
     }
     else{
         printf("%s's port: %d\n", r_username, r_port);    
+
+        //todo: create socket with recv_device and start chat
+        
     }
     
+
     chat_end:
     printf("COMANDO CHAT ESEGUITO \n");
     close(server.sd);
@@ -411,9 +417,9 @@ void read_command(){
     }						
 }
 
-//////////////////////////////////////////////////////////////////////////
-///                             MAIN                                   ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                                 MAIN                                ///
+//* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char* argv[]){
     

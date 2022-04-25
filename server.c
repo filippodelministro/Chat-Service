@@ -1,8 +1,8 @@
 #include "all.h"
 
-//////////////////////////////////////////////////////////////////////////
-///                             DECLARATION                            ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                             DECLARATION                             ///
+//* ///////////////////////////////////////////////////////////////////////
 
 //-----------     SERVER    -----------------
 int my_port;
@@ -15,7 +15,7 @@ struct device{
     struct sockaddr_in addr;
     bool connected;
 
-    struct tm* tv;
+    struct tm* tv;              //fix: stesso tv per ogni devices
     int id;
     char* username;
     char* password;
@@ -33,9 +33,9 @@ fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
 //What a server user can use to interact with server
-//////////////////////////////////////////////////////////////////////////
-///                              COMMAND                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                             COMMANDS                                ///
+//* ///////////////////////////////////////////////////////////////////////
 
 void help_command(){
     printf("Type a command:\n\n"
@@ -60,7 +60,7 @@ void list_command(){
             if(d->connected){
                 printf("\t%d\t%s\t\t%d:%d:%d\t%d\t%d\n",
                     d->id, d->username, 
-                    d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,
+                    d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,    
                     d->port,
                     d->sd
                 );
@@ -69,17 +69,15 @@ void list_command(){
     }
 }
 
-
-//to do         ???
 void esc_command(){
     printf("ESC COMMAND ESEGUITO\n");
 }
 
 
 //maybe in an unic extern file utility.c            ???
-//////////////////////////////////////////////////////////////////////////
-///                              UTILITY                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                              UTILITY                                ///
+//* ///////////////////////////////////////////////////////////////////////
 
 void boot_message(){
     printf("**********************SERVER STARTED**********************\n");
@@ -110,9 +108,9 @@ void read_command(){
 }
 
 //Function called by the server so manage socket and interaction with devices
-//////////////////////////////////////////////////////////////////////////
-///                             FUNCTION                               ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                               FUNCTIONS                             ///
+//* ///////////////////////////////////////////////////////////////////////
 
 //check if usr account already exists    
 bool usr_exists(const char* usr){
@@ -267,9 +265,7 @@ void create_tcp_socket(char* port){
     printf("[server] create_tcp_socket: waiting for connection...\n");
 }
 
-////////////////////////////////////////////////////////////////////////
-
-//to do                 ???
+//* //////////////////////////////////////////////////////////////////////
 
 //prende opcode dal device (recv), poi lo fa gestire da un 
 //processo figlio con uno switch case
@@ -282,15 +278,15 @@ void handle_request(){
 
     char buffer[BUFFER_SIZE];
     int ret;
-    // uint16_t ret_;
-    // pid_t pid;
+    //// uint16_t ret_;
+    //// pid_t pid;
 
     //tell which command to do
     uint16_t opcode;
 
     //for signup and in command
     int port;
-    // uint16_t id;
+    //// uint16_t id;
     int id;
     char username[1024];
     char password[1024];
@@ -300,7 +296,7 @@ void handle_request(){
     opcode = recv_int(new_dev);
     printf("opcode: %d\n", opcode);
 
-    //semmai fare una fork() qui ???
+    //fix: semmai fare una fork() qui
     switch (opcode){
     case 0:                                                     
         //SIGNUP BRANCH
@@ -390,10 +386,17 @@ void handle_request(){
             send_int(OK_CODE, new_dev);
         }
 
-        //sending port: server_port if device is offline, device_port instead
-        int p = (devices[id_receiver].connected) ? devices[id_receiver].port : my_port;
-        send_int(p, new_dev);
+        //manage chat in different situation
+        if(devices[id_receiver].connected){
+            //request device is online!
+            send_int(devices[id_receiver].port, new_dev);
+        }
+        else{
+            //request device is offline: server manage chat with new_dev  
+            send_int(my_port, new_dev); 
+            //todo: sever has to manage chat with new_dev
 
+        }
 
     chat_end:
         prompt();
@@ -409,8 +412,7 @@ void handle_request(){
         id = recv_int(new_dev);
         printf("id ricevuto: %d", id);
 
-        //check for autentichation (recv)
-            //[...]
+        //todo: check for autentichation (recv)
 
         //send ACK to safe disconnect
         send_int(id, new_dev);            
@@ -433,9 +435,9 @@ void handle_request(){
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-///                             MAIN                                   ///
-//////////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+//*                                 MAIN                                ///
+//* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv){
 
