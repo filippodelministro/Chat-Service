@@ -1,17 +1,16 @@
-# make rule primaria con dummy target ‘all’--> non crea alcun file all ma fa un complete build 
-#                                                                          che dipende dai target client e server scritti sotto  
+# primary make rule: doesnt create any file but needed to build target file                                                                              
 all: dev server  
  
-# make rule per il client 
+# make rule for client file 
 client: dev.o 
 	gcc -Wall dev.c -o dev 
  
-# make rule per il server 
+# make rule for server file
 server: server.o 
 	gcc -Wall server.c -o server 
+
  
- 
-# pulizia dei file della compilazione (eseguito con ‘make clean’ da terminale) 
+# remove ojbect file reate durign compilation ('make reset' to execute)
 reset: 
 	rm *o dev server
 

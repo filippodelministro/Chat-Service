@@ -20,7 +20,7 @@ struct device{
 
     //chat info
     int msg_pend;
-};
+}devices[MAX_DEVICES];
 
 struct device my_device;
 
@@ -114,6 +114,39 @@ void create_listening_socket_tcp(){
     
     FD_SET(listening_socket, &master);
     if(listening_socket > fdmax){ fdmax = listening_socket; }
+}
+
+void create_chat_socket(int id, int port){
+
+    //create socket
+    if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("socket() error");
+        printf("closing program...\n"); 
+        exit(-1);
+    }
+    printf("Create socket correcty\n");
+
+    //create address
+    memset((void*)&devices[id].addr, 0, sizeof(devices[id].addr));
+    devices[id].addr.sin_family = AF_INET;
+    devices[id].addr.sin_port = htons(port);
+    inet_pton(AF_INET, "127.0.0.1", &devices[id].addr.sin_addr);
+    printf("Cleared address correctly\n");
+
+    //connection
+    if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
+        perror("connect() error");
+        exit(-1);
+    }
+
+    struct device* d = &devices[id];
+
+    printf("[create_chat_socket] Now you are connected with:\n"
+        "\tid:\t%d\n"
+        "\tport:\t%d\n"
+        "\tuser:\t%s\n",
+        d->id, d->port, d->username
+    );
 }
 
 void send_opcode(int op){
@@ -295,8 +328,10 @@ void show_command(){
 
 void chat_command(){
     char r_username[1024];
-    int r_port;
+    int r_port, r_id;
     scanf("%s", r_username);
+
+    int chat_sd;
 
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -316,15 +351,21 @@ void chat_command(){
     //receive port: chat with server if recv_device is not online
     r_port = recv_int(server.sd);
     if(r_port == server.port){
+        //device is not online: chatting with server
         printf("[device] user '%s' is not online: sending messages to server!\n", r_username);
-            
+        
         //todo: check '\q ecc.' to exit chat
-
     }
     else{
-        printf("%s's port: %d\n", r_username, r_port);    
+        //device is online: chatting with him
+        r_id = recv_int(server.sd);
+        printf("connection with '%s'\n", r_username);
+        printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
+
+        printf("AAAAAAA\n");
 
         //todo: create socket with recv_device and start chat
+        create_chat_socket(r_id, r_port);
         
     }
     
@@ -466,6 +507,7 @@ int main(int argc, char* argv[]){
                 else if(i == listening_socket){
                     //connection request
 
+                    //fix: print in loop
                     printf("\t\ti == listening_socket\n");
 
                 }

@@ -388,12 +388,14 @@ void handle_request(){
 
         //manage chat in different situation
         if(devices[id_receiver].connected){
-            //request device is online!
+            //request device is online: sending destination info (port and id)
             send_int(devices[id_receiver].port, new_dev);
+            send_int(id_receiver, new_dev);
+
         }
         else{
             //request device is offline: server manage chat with new_dev  
-            send_int(my_port, new_dev); 
+            send_int(my_port, new_dev);
             //todo: sever has to manage chat with new_dev
 
         }
