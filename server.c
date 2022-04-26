@@ -247,6 +247,8 @@ void create_tcp_socket(char* port){
         perror("[server] error socket()\n");
         exit(-1);
     }
+    if(setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
 
     //create address
     memset(&my_addr, 0, sizeof(my_addr));

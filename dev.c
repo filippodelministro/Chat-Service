@@ -12,11 +12,13 @@ struct device{
 
     //device info
     int id;
-    bool connected;
-    bool registred;
-    struct tm* tv;
     char* username;
     char* password;
+    bool connected;         //true if chat already open
+    
+    //not needed for device purpouse
+    ////bool registred;
+    ////struct tm* tv;
 
     //chat info
     int msg_pend;
@@ -55,6 +57,30 @@ void boot_message(){
 //*                             FUNCTIONS                               ///
 //* ///////////////////////////////////////////////////////////////////////
 
+void list_contacts(){
+    int i;
+    int n_conn = 0;
+
+    for(i=0; i<MAX_DEVICES; i++){
+        if(devices[i].connected)
+            n_conn++;            
+    }
+
+    printf("\n[list_device] %u devices online\n", n_conn);
+    printf("\tdev_id\tusername\tport\tsocket\n");
+        for(i=0; i<MAX_DEVICES; i++){
+
+            struct device* d = &devices[i];
+            if(d->connected){
+                printf("\t%d\t%s\t\t%d\t%d\n",
+                    d->id, d->username, 
+                    d->port,
+                    d->sd
+                );
+            }
+        }
+}
+
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
@@ -76,6 +102,8 @@ void create_srv_socket_tcp(int p){
         perror("[device] socket() error");
         exit(-1);
     }
+    //// if(setsockopt(server.sd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    ////     perror("setsockopt(SO_REUSEADDR) failed");
 
     //address
     memset(&server.addr, 0, sizeof(server.addr));
@@ -97,6 +125,8 @@ void create_listening_socket_tcp(){
         perror("[device] socket() error");
         exit(-1);
     }
+    //// if (setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    ////     perror("setsockopt(SO_REUSEADDR) failed");
 
     //address
     memset(&my_device.addr, 0, sizeof(my_device.addr));
@@ -124,14 +154,14 @@ void create_chat_socket(int id, int port){
         printf("closing program...\n"); 
         exit(-1);
     }
-    printf("Create socket correcty\n");
+    if(setsockopt(devices[id].sd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
 
     //create address
     memset((void*)&devices[id].addr, 0, sizeof(devices[id].addr));
     devices[id].addr.sin_family = AF_INET;
     devices[id].addr.sin_port = htons(port);
     inet_pton(AF_INET, "127.0.0.1", &devices[id].addr.sin_addr);
-    printf("Cleared address correctly\n");
 
     //connection
     if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
@@ -141,12 +171,7 @@ void create_chat_socket(int id, int port){
 
     struct device* d = &devices[id];
 
-    printf("[create_chat_socket] Now you are connected with:\n"
-        "\tid:\t%d\n"
-        "\tport:\t%d\n"
-        "\tuser:\t%s\n",
-        d->id, d->port, d->username
-    );
+    list_contacts();
 }
 
 void send_opcode(int op){
@@ -172,6 +197,17 @@ void dev_init(int id, const char* usr, const char* pswd){
                     "\t password: %s\n",
                     d->id, d->username, d->password
     );
+}
+
+//initilize dev to communicate with
+void add_dev(int id, const char* usr, int port){
+    
+    struct device* d = &devices[id];
+    d->username = malloc(sizeof(usr));
+    strcpy(d->username, usr);
+    d->port = port;
+
+    d->connected = true;
 }
 
 //What a device user can use to interact with device
@@ -359,13 +395,12 @@ void chat_command(){
     else{
         //device is online: chatting with him
         r_id = recv_int(server.sd);
-        printf("connection with '%s'\n", r_username);
+        printf("[device] connection with '%s'\n", r_username);
         printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
 
-        printf("AAAAAAA\n");
-
-        //todo: create socket with recv_device and start chat
+        add_dev(r_id, r_username, r_port);
         create_chat_socket(r_id, r_port);
+        //todo: create socket with recv_device and start chat
         
     }
     
@@ -462,6 +497,24 @@ void read_command(){
 //*                                 MAIN                                ///
 //* ///////////////////////////////////////////////////////////////////////
 
+void handle_request(){
+    printf("[handle_request] START!");
+
+    int new_dev;
+    struct sockaddr_in new_addr;
+    socklen_t addrlen = sizeof(new_addr);
+
+    char buffer[BUFFER_SIZE];
+    int ret, opcode;
+    new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
+    ////opcode = recv_int(new_dev);
+
+
+}
+
+//* ///////////////////////////////////////////////////////////////////////
+//* ///////////////////////////////////////////////////////////////////////
+
 int main(int argc, char* argv[]){
     
     int i;
@@ -506,10 +559,7 @@ int main(int argc, char* argv[]){
 
                 else if(i == listening_socket){
                     //connection request
-
-                    //fix: print in loop
-                    printf("\t\ti == listening_socket\n");
-
+                    handle_request();
                 }
                 
                 else if(i == server.sd){
