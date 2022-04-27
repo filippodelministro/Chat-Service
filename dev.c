@@ -80,7 +80,6 @@ void list_contacts(){
             }
         }
 }
-
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
@@ -91,7 +90,13 @@ void fdt_init(){
 
     printf("[device] fdt_init: set init done...\n");
 }
+void send_opcode(int op){
+    //send opcode to server
+    printf("[device] send opcode %d to server...\n", op);
+    send_int(op, server.sd);
+}
 
+//*manage socket
 void create_srv_socket_tcp(int p){
 
     // printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
@@ -119,7 +124,6 @@ void create_srv_socket_tcp(int p){
 
     // printf("[device] create_srv_tcp_socket: waiting for connection...\n");
 }
-
 void create_listening_socket_tcp(){
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("[device] socket() error");
@@ -145,7 +149,6 @@ void create_listening_socket_tcp(){
     FD_SET(listening_socket, &master);
     if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
-
 int create_chat_socket(int id, int port){
 
     //create socket
@@ -175,14 +178,9 @@ int create_chat_socket(int id, int port){
     return devices[id].sd;
 }
 
-void send_opcode(int op){
-    //send opcode to server
-    printf("[device] send opcode %d to server...\n", op);
-    send_int(op, server.sd);
-}
-
-//initialize my_device structure with usr/pswd get by user & dev_id get server
+//*manage devices
 void dev_init(int id, const char* usr, const char* pswd){
+//initialize my_device structure with usr/pswd get by user & dev_id get server
     
     struct device* d = &my_device;
 
@@ -199,9 +197,8 @@ void dev_init(int id, const char* usr, const char* pswd){
                     d->id, d->username, d->password
     );
 }
-
-//initilize dev to communicate with
 void add_dev(int id, const char* usr, int port){
+//initilize dev to communicate with
     
     struct device* d = &devices[id];
     d->username = malloc(sizeof(usr));
@@ -211,6 +208,108 @@ void add_dev(int id, const char* usr, int port){
     d->connected = true;
 }
 
+//*manage chats
+bool read_chat_command(int rec){
+
+    char cmd[COMMAND_LENGHT];
+
+    scanf("%s", cmd);
+
+    //signup and in allowed only if not connected
+    //other command allowed only if connected
+    if(!strncmp(cmd, "\\q", 2)){
+        printf("[read_chat_command] QUIT!\n");
+        //todo: quit from chat
+
+        return false;
+    }
+    else if(!strncmp(cmd, "\\a", 2)){
+        printf("[read_chat_command] ADD!\n");
+        //todo: quit from chat
+
+        return false;
+    }
+
+    //any command: normal message
+    send_int(133, rec);
+    return true;
+}
+void get_message(int rec){
+    recv_int(rec);
+}
+void handle_chat(int receiver){
+    char msg[1000];
+    char buffer[10000];
+    ////int len;
+
+    //// while(read_chat_command()){
+    ////     //if here can proceed with chat
+    ////     scanf("%s", msg);
+    ////     //// len = sizeof(msg); 
+    ////     send_msg(msg, receiver);
+    //// }
+
+    int i;
+    bool ok = true;
+    while(ok){
+        read_fds = master;
+        if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("[device] error select() ");
+			exit(-1);
+		}
+
+        for(i=0; i<=fdmax; i++){
+            if(FD_ISSET(i, &read_fds)){
+                if(i == 0){
+                    //keyboard
+                    ok = read_chat_command(receiver);
+                    
+                }
+
+                else if(i == listening_socket){
+                    //connection request
+                    get_message(receiver);
+                }   
+            }
+        }
+    }
+
+
+
+}
+void handle_request(){
+
+    //// char buffer[BUFFER_SIZE];
+    //// int ret, opcode;
+    
+    int s_sd, s_port;
+    char* s_username;
+    struct sockaddr_in s_addr;
+    socklen_t addrlen = sizeof(s_addr);    
+    s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
+
+    //receive sender info
+    s_port = recv_int(s_sd);
+    recv_msg(s_sd, s_username);
+
+    printf("[handle_request] Now connected with:\n"
+        "\tuser:\t%s\n"
+        "\tport:\t%d\n",
+        s_username, s_port
+    );
+
+    //todo: manage history of chat
+
+    // handle_chat(s_sd);
+    /*char msg[1000];
+     while(read_chat_command()){
+        //if here can proceed with chat
+        scanf("%s", msg);
+        //// len = sizeof(msg);
+        send_msg(msg, s_sd);
+    }
+    */
+}
 //What a device user can use to interact with device
 //* ///////////////////////////////////////////////////////////////////////
 //*                             COMMANDS                                ///
@@ -331,7 +430,7 @@ void in_command(){
 
     //complete: device is now online
     my_device.connected = true;
-    printf("[device] You are now online!\n");
+    printf("[device] You are now online!\n\a");
     
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
@@ -368,7 +467,11 @@ void chat_command(){
     int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
-    int chat_sd;
+    //check to avoid self-chat
+    if(strcmp(r_username, my_device.username) == 0){
+        perror("[device] Error: chatting with yourself");
+	    return;
+    } 
 
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -399,15 +502,21 @@ void chat_command(){
         printf("[device] connection with '%s'\n", r_username);
         printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
 
+        //todo: check if chat already opened
+
         add_dev(r_id, r_username, r_port);
         r_sd = create_chat_socket(r_id, r_port);
-        //todo: create socket with recv_device and start chat
 
-        recv_int(r_sd);
-        send_int(167, r_sd);
+        //sending information
+        send_int(my_device.port, r_sd);
+        send_msg(my_device.username, r_sd);
         
+        // handle_chat(r_sd);
+
+        // send_msg("Ciao", r_sd);
+
     }
-    
+
 
     chat_end:
     printf("COMANDO CHAT ESEGUITO \n");
@@ -500,24 +609,6 @@ void read_command(){
 //* ///////////////////////////////////////////////////////////////////////
 //*                                 MAIN                                ///
 //* ///////////////////////////////////////////////////////////////////////
-
-void handle_request(){
-    printf("[handle_request] Received request connection from: \n");
-
-    int new_dev;
-    struct sockaddr_in new_addr;
-    socklen_t addrlen = sizeof(new_addr);
-
-    char buffer[BUFFER_SIZE];
-    int ret, opcode;
-    new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    ////opcode = recv_int(new_dev);
-
-    //mando 133 come prova
-    send_int(133, new_dev);
-    recv_int(new_dev);
-
-}
 
 //* ///////////////////////////////////////////////////////////////////////
 //* ///////////////////////////////////////////////////////////////////////
