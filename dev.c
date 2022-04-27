@@ -125,8 +125,8 @@ void create_listening_socket_tcp(){
         perror("[device] socket() error");
         exit(-1);
     }
-    //// if (setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-    ////     perror("setsockopt(SO_REUSEADDR) failed");
+    if (setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
 
     //address
     memset(&my_device.addr, 0, sizeof(my_device.addr));
@@ -146,7 +146,7 @@ void create_listening_socket_tcp(){
     if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
 
-void create_chat_socket(int id, int port){
+int create_chat_socket(int id, int port){
 
     //create socket
     if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -172,6 +172,7 @@ void create_chat_socket(int id, int port){
     struct device* d = &devices[id];
 
     list_contacts();
+    return devices[id].sd;
 }
 
 void send_opcode(int op){
@@ -364,7 +365,7 @@ void show_command(){
 
 void chat_command(){
     char r_username[1024];
-    int r_port, r_id;
+    int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
     int chat_sd;
@@ -399,8 +400,11 @@ void chat_command(){
         printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
 
         add_dev(r_id, r_username, r_port);
-        create_chat_socket(r_id, r_port);
+        r_sd = create_chat_socket(r_id, r_port);
         //todo: create socket with recv_device and start chat
+
+        recv_int(r_sd);
+        send_int(167, r_sd);
         
     }
     
@@ -498,7 +502,7 @@ void read_command(){
 //* ///////////////////////////////////////////////////////////////////////
 
 void handle_request(){
-    printf("[handle_request] START!");
+    printf("[handle_request] Received request connection from: \n");
 
     int new_dev;
     struct sockaddr_in new_addr;
@@ -509,6 +513,9 @@ void handle_request(){
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     ////opcode = recv_int(new_dev);
 
+    //mando 133 come prova
+    send_int(133, new_dev);
+    recv_int(new_dev);
 
 }
 
