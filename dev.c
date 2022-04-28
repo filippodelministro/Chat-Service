@@ -278,7 +278,8 @@ void handle_chat(int sock) {
                     // printf("[%s]: ", devices[ret].username);
                     if(!recv_msg2(sock, buffer, false)){
                         printf("L'altro utente si e' disconnesso...\n");
-                        exit(0);
+                        // exit(0);
+                        return;
                     }
                     printf("%s\n", buffer);
                 }
