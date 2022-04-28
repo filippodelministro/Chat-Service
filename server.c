@@ -481,14 +481,14 @@ int main(int argc, char** argv){
     
             if(FD_ISSET(i, &read_fds)){
 
-                //keyboard                     
+                //keyboard                    
                 if(i == 0)                      
                     read_command();     
 
                 //deveices request             
                 if(i == listening_socket)  
                     handle_request();
-            }	
+            }	 
         }
     }
 } 

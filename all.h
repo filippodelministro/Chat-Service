@@ -62,6 +62,13 @@ void send_msg(char *str, int sd){
     }
 }
 
+/*
+#define recv_msg(...) OVERLOAD(recv_msg, (__VA_ARGS__), \
+    (recv_msg1, (int, char*)), \
+    (recv_msg2, (int, char*, bool)), \
+)
+*/
+
 void recv_msg(int sd, char* ret){
     int len = recv_int(sd);
 
@@ -74,6 +81,23 @@ void recv_msg(int sd, char* ret){
     strcpy(ret, buf);
     ret = buf;
 }
+
+//todo: overloading of functions
+void recv_msg2(int sd, char* ret, bool show){
+    int len = recv_int(sd);
+
+    char buf[len];
+
+    recv(sd, (void*)&buf, len, 0);
+    buf[len] = '\0';
+
+    if(show)
+        printf("recv_msg: received '%s'\n", buf);
+
+    strcpy(ret, buf);
+    ret = buf;
+}
+
 
 void prompt(){
 	printf("\n> ");
