@@ -169,7 +169,7 @@ int find_device(const char* usr){
 int find_device_from_socket(int sd){
     int i;
 
-    printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
+    // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
         

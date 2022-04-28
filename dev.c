@@ -207,13 +207,22 @@ void add_dev(int id, const char* usr, int port){
 
     d->connected = true;
 }
+int find_device_from_socket(int sd){
+    int i;
+
+    // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
+    for(i=0; i<MAX_DEVICES; i++){
+        struct device *d = &devices[i];
+        
+        if(d->sd == sd && d->connected)
+            return i;    
+    }
+
+    return -1;      //not found
+}
 
 //*manage chats
-bool read_chat_command(int rec){
-
-    char cmd[COMMAND_LENGHT];
-    scanf("%s", cmd);
-
+bool check_chat_command(const char* cmd){
     if(!strncmp(cmd, "\\q", 2)){
         printf("[read_chat_command] QUIT!\n");
         return false;
@@ -225,78 +234,53 @@ bool read_chat_command(int rec){
         return false;
     }
 
-    //any command: normal message
-    send_msg(cmd, rec);
     return true;
 }
 
 
-//fix: dont work
 void handle_chat(int sock) {
     int ret, i;
+    char buffer[BUFFER_SIZE];       //buffer per memorizzare il messaggio scritto dall'utente
+    
+    //// char msg[MSG_LEN];          //messaggio da inviare, formato: username [hh:mm:ss]: (msg)
+    //// char timest[8];              // dove metto il timestamp formattato
+    //// Variabili per il timestamp dei messaggi
+    //// time_t rawtime; 
+    //// struct tm *msg_time;
 
-    //fix
-    int MSG_LEN, BUFF_LEN = 100;
-
-    char msg[MSG_LEN];          //messaggio da inviare, formato: username [hh:mm:ss]: (msg)
-    char buffer[BUFF_LEN];       //buffer per memorizzare il messaggio scritto dall'utente
-    char timest[8];              // dove metto il timestamp formattato
-    // Set per la select
-	// fd_set read_fds;
-	// fd_set master;
-    // Variabili per il timestamp dei messaggi
-    // time_t rawtime; 
-    // struct tm *msg_time;
-
-    // Pulisco i set  
-    // FD_ZERO(&master);
-    // FD_ZERO(&read_fds);
-    // Metto il socket di comunicazione e quello dello STDIN nel set master 
     FD_SET(sock, &master);
-    // FD_SET(STDIN, &master);
-    //Aggiorno il massimo 
     fdmax = sock;
-    printf("Entriamo nel ciclo\n");
-    // system("clear");
+    system("clear");
     for(;;) {
         read_fds = master; 
         ret = select(fdmax + 1, &read_fds, NULL, NULL, NULL); 
-        printf("Select fatta\n");
 		if (ret < 0) {
 			perror("Errore in fase di select");
 			exit(-1);
 		}
 		for (i = 0; i <= fdmax; i++) {
 			if(FD_ISSET(i, &read_fds)) {
-                // printf("Ho un descrittore pronto: %d\n", i);
-                //Se è pronto lo stdin ho un messaggio da inviare
                 if (i == 0) {
-                    printf("i==0\n");
+                    //keyboard: sending message
+                    //todo: read_chat_command
+                    // printf("[%s]: ", my_device.username);
                     scanf("%s", buffer);
-                    
-                    // prendo il timestamp del messaggio (per inviarlo in formato username [timestamp]: msg
-                    // time(&rawtime);
-				    // msg_time = localtime(&rawtime);
-                    // strftime(timest, 9, "%X", msg_time);
-                    // sprintf(msg, "%s [%s]: %s", my_device.username, timest, buffer);
-					// Invio il messaggio 
-                    // ret = send(sock, msg, MSG_LEN, 0); 
-                    // send_int(133, sock);
-                    send_msg(buffer, sock);
+                    if(check_chat_command(buffer))
+                        send_msg(buffer, sock);
+                    else 
+                        exit(0);
                 }
                 // Se è pronto il socket di comunicazione ho un messaggio da ricevere 
-                else if(i == sock) {
-                    printf("i==sock\n");
-                    // ret = recv(sock, (void*)msg, MSG_LEN, 0);
-                    // recv_int(sock); 
-                    recv_msg(sock, buffer);
-                    printf("%s\n", buffer);
-					// Se la ret è 0 l'altro utente si è disconnesso improvvisamente (ancora da gestire)
-                    if (ret == 0) {
+                else if(i == sock){
+                    //received message
+                    //todo: find device who is sending message
+                    // ret = find_device_from_socket(sock);
+                    // printf("[%s]: ", devices[ret].username);
+                    if(!recv_msg2(sock, buffer, false)){
                         printf("L'altro utente si e' disconnesso...\n");
                         exit(0);
                     }
-                    // printf("%s\n", msg);
+                    printf("%s\n", buffer);
                 }
             }
         }
@@ -511,8 +495,8 @@ void chat_command(){
     else{
         //device is online: chatting with him
         r_id = recv_int(server.sd);
-        printf("[device] connection with '%s'\n", r_username);
-        printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
+        // printf("[device] connection with '%s'\n", r_username);
+        // printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
 
         //todo: check if chat already opened
 
@@ -520,11 +504,10 @@ void chat_command(){
         r_sd = create_chat_socket(r_id, r_port);
 
         //sending information
-        //!send_int(my_device.port, r_sd);
-        //!send_msg(my_device.username, r_sd);
-        //!handle_chat(r_sd);
+        send_int(my_device.port, r_sd);
+        send_msg(my_device.username, r_sd);
 
-        printf("continue with chat_prova()\n");
+        printf("[device] Connected with '%s': you can now chat!\n");
         handle_chat(r_sd);
     }
 

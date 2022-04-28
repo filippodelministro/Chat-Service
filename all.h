@@ -49,6 +49,24 @@ int recv_int(int sd){
     return num;
 }
 
+int recv_int2(int sd, bool show){
+    int num;
+    uint16_t num_;
+    if(!recv(sd, (void*)&num_, sizeof(uint16_t), 0)){
+        perror("Error recv: \n");
+        exit(-1);
+    }
+    
+    num = ntohs(num_);
+    if(show){
+        if(num == ERR_CODE){ printf("revc_int: received ERR_CODE!\n"); }
+        else if (num == OK_CODE) { printf("recv_int: received OK_CODE!\n"); }
+        else { printf("revc_int: received num %d\n", num); }
+    }
+    
+    return num;
+}
+
 void send_msg(char *str, int sd){
     int len = strlen(str);
     
@@ -83,12 +101,13 @@ void recv_msg(int sd, char* ret){
 }
 
 //todo: overloading of functions
-void recv_msg2(int sd, char* ret, bool show){
-    int len = recv_int(sd);
+int recv_msg2(int sd, char* ret, bool show){
+    int len = recv_int2(sd, show);
+    int ok;
 
     char buf[len];
 
-    recv(sd, (void*)&buf, len, 0);
+    ok = recv(sd, (void*)&buf, len, 0);
     buf[len] = '\0';
 
     if(show)
@@ -96,6 +115,7 @@ void recv_msg2(int sd, char* ret, bool show){
 
     strcpy(ret, buf);
     ret = buf;
+    return ok;
 }
 
 
