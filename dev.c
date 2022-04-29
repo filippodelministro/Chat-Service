@@ -26,6 +26,8 @@ struct device{
 
 struct device my_device;
 
+int n_dev;                 //number of devices registred
+
 //-----------     SERVER    -----------------
 //server considered as a device
 struct device server;
@@ -332,23 +334,22 @@ void handle_chat(int sock) {
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
                     if(recv(sock, (void*)msg, BUFFER_SIZE, 0) == 0){
                         //todo: handle this case
-                        printf("Other devices quit the chat\n");
+                        printf("Other device quit!\n");
                         return;
                     }
-                    
-
                     printf("%s", msg);
                 }
             }
         }
     }
+    FD_CLR(sock, &master);
 }
 
 void handle_request(){
     printf("[handle_request]\n");
 
     int s_sd, s_port;
-    char* s_username;
+    char s_username[BUFFER_SIZE];
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
@@ -359,17 +360,14 @@ void handle_request(){
 
     //todo: manage history of chat
 
-    // printf("[%s]: '%s'", s_username, b);
     //fix: ALTRO_NOME
-    printf("[device] Received conncection request from 'ALTRO_NOME'\n");
-    /*
+    printf("[device] Received conncection request from '%s'\n", s_username);
     for(int i=3; i>0; i--){
         printf("[device] Chat starting in %d seconds...\r", i);
         sleep(1);
     }
-    */
-    
     handle_chat(s_sd);
+    close(s_sd);
 }
 
 //What a device user can use to interact with device
@@ -494,14 +492,13 @@ void in_command(){
     //complete: device is now online
     my_device.connected = true;
     printf("[device] You are now online!\n");
-    
+
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
 void list_command(){
     char buffer[BUFFER_SIZE];
-    memset(buffer, 0, sizeof(buffer));
 
     create_srv_socket_tcp(server.port);
 
@@ -509,8 +506,19 @@ void list_command(){
     send_opcode(LIST_OPCODE);
     sleep(1);
 
-
-
+    //get n_dev and all devices name if
+    printf("\tdev_id\tusername\tstatus\n");
+    n_dev = recv_int2(server.sd, false);
+    for(int i=0; i<n_dev; i++){
+        recv_msg2(server.sd, buffer, false);
+        int online = recv_int2(server.sd, false);
+        
+        printf("\t%d\t%s\t\t", i, buffer);
+        if(online == OK_CODE)
+            printf("ONLINE\n");
+        else
+            printf("OFFLINE\n");
+    }
 
 }
 
@@ -541,7 +549,7 @@ void show_command(){
 }
 
 void chat_command(){
-    char r_username[1024];
+    char r_username[BUFFER_SIZE];
     int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
@@ -589,14 +597,14 @@ void chat_command(){
         send_int(my_device.port, r_sd);
         send_msg(my_device.username, r_sd);
 
-        /*
         printf("[device] Connected with '%s': you can now chat!\n", r_username);
         for(int i=3; i>0; i--){
             printf("[device] Chat starting in %d seconds...\r", i);
             sleep(1);
         }
-        */
+        
         handle_chat(r_sd);
+        close(r_sd);
     }
 
 
@@ -758,7 +766,7 @@ int main(int argc, char* argv[]){
                     // i = recv_int(server.sd);
                     // printf("[device] TEST: received %d\n", i);
 
-                    printf("\t\ti == server.sd\n");
+                    // printf("\t\ti == server.sd\n");
 
                 }
 

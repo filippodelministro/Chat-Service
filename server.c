@@ -281,6 +281,7 @@ void handle_request(){
 
     //connecting device
     int new_dev;
+    struct device* d;
     struct sockaddr_in new_addr;
     socklen_t addrlen = sizeof(new_addr);
 
@@ -353,6 +354,18 @@ void handle_request(){
 
     case LIST_OPCODE:
         printf("LIST_BRANCH!!\n");
+        
+
+        //sending number of device, then username of each device
+        send_int(n_dev, new_dev);
+        for(int i=0; i<n_dev; i++){
+            d = &devices[i];
+            send_msg(d->username, new_dev);
+
+            //sending ONLINE or OFFLINE
+            ret = ((d->connected) ? OK_CODE : ERR_CODE);
+            send_int(ret, new_dev);
+        }
 
         prompt();
         break;
@@ -431,7 +444,7 @@ void handle_request(){
         //get id from device
         id = recv_int(new_dev);
         printf("id ricevuto: %d", id);
-        struct device* d = &devices[id];
+        d = &devices[id];
 
         //get username & password for autentication
         recv_msg(new_dev, username);
