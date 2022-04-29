@@ -297,8 +297,8 @@ void handle_request(){
     int port;
     //// uint16_t id;
     int id;
-    char username[1024];
-    char password[1024];
+    char username[WORD_SIZE];
+    char password[WORD_SIZE];
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
@@ -353,9 +353,7 @@ void handle_request(){
         break;
 
     case LIST_OPCODE:
-        printf("LIST_BRANCH!!\n");
         
-
         //sending number of device, then username of each device
         send_int(n_dev, new_dev);
         for(int i=0; i<n_dev; i++){
@@ -383,28 +381,29 @@ void handle_request(){
         break;
 
     case CHAT_OPCODE:
-        printf("CHAT BRANCH!\n");
 
-        //receive sender & receiver info
         int r_id, s_id;
-        //todo: name sender and receiver
-        //todo: char* s_username, r_username
+        char r_username[WORD_SIZE];
+        char s_username[WORD_SIZE];
+
+        //get sender & receiver info
         s_id = recv_int(new_dev);
         recv_msg(new_dev, username);
-
         r_id = find_device(username);
 
         //check if receiver is registered
         if(r_id == -1){
-            printf("[server] receiver does not exist...\nsending ERR_CODE\n");    
+            printf("[server] '%s' does not exist...\nsending ERR_CODE\n", username);    
             send_int(ERR_CODE, new_dev);
             goto chat_end;
         }
         else{
-            printf("[server] chat request:\n"
-                "\tsender_id: %d\n"
-                "\treceiver_id: %d\n",
-                s_id, r_id
+            strcpy(r_username, devices[r_id].username);
+            strcpy(s_username, devices[s_id].username); 
+            printf("\n\n[server] chat request:\n"
+                "\tsender: %s\t[%d]\n"
+                "\treceiver: %s\t[%d]\n",
+                r_username, r_id, s_username, s_id
             );
             //sending receiver's port
             send_int(OK_CODE, new_dev);
@@ -421,7 +420,7 @@ void handle_request(){
             //request device is offline: server manage chat with new_dev  
             send_int(my_port, new_dev);
 
-            printf("receiver is offline: getting messages from sender!\n");
+            printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
             while((recv_int2(new_dev, false)) == OK_CODE){
                 //todo: convert in send_msg (remove BUFFER_SIZE)
                 ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);

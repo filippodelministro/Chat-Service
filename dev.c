@@ -359,13 +359,17 @@ void handle_request(){
     recv_msg2(s_sd, s_username, false);
 
     //todo: manage history of chat
-
-    //fix: ALTRO_NOME
+    
     printf("[device] Received conncection request from '%s'\n", s_username);
+    //fix: waiting
+    sleep(2);
+    /*
     for(int i=3; i>0; i--){
         printf("[device] Chat starting in %d seconds...\r", i);
         sleep(1);
     }
+    */
+    
     handle_chat(s_sd);
     close(s_sd);
 }
@@ -389,9 +393,9 @@ void help_command(){
 
 void signup_command(){
 
-    char port[1024];
-    char username[1024];
-    char password[1024];
+    char port[WORD_SIZE];
+    char username[WORD_SIZE];
+    char password[WORD_SIZE];
     char buffer[BUFFER_SIZE];
 
     //get data from stdin
@@ -441,9 +445,9 @@ void signup_command(){
 
 void in_command(){
 
-    char srv_port[1024];
-    char username[1024];
-    char password[1024];
+    char srv_port[WORD_SIZE];
+    char username[WORD_SIZE];
+    char password[WORD_SIZE];
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
 
@@ -507,33 +511,32 @@ void list_command(){
     sleep(1);
 
     //get n_dev and all devices name if
-    printf("\tdev_id\tusername\tstatus\n");
+    printf("\tdev_id\tusername\tonline\n");
     n_dev = recv_int2(server.sd, false);
     for(int i=0; i<n_dev; i++){
+        //receive other devices info
         recv_msg2(server.sd, buffer, false);
         int online = recv_int2(server.sd, false);
-        
-        printf("\t%d\t%s\t\t", i, buffer);
-        if(online == OK_CODE)
-            printf("ONLINE\n");
-        else
-            printf("OFFLINE\n");
+
+        //print other devices info
+        printf("\t%d\t%s\t\t[", i, buffer);
+        if(online == OK_CODE) printf("x");
+        else printf(" ");
+        printf("]\n");
     }
 
 }
 
 void hanging_command(){
-	char buffer[4096];
 
     //first handshake
     create_srv_socket_tcp(server.port);
     send_opcode(HANGING_OPCODE);
     sleep(1);
 
-    send_int(my_device.id, server.sd);
 
+    printf("COMANDO SHOW ESEGUITO \n");
     prompt();
-    memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
@@ -546,6 +549,8 @@ void show_command(){
     // send_int(my_device.id, server);
 
     printf("COMANDO SHOW ESEGUITO \n");
+    prompt();
+    close(server.sd);
 }
 
 void chat_command(){
@@ -563,9 +568,9 @@ void chat_command(){
     create_srv_socket_tcp(server.port);
     send_opcode(CHAT_OPCODE);
     sleep(1);
-    send_int(my_device.id, server.sd);
 
-    //sending chat info
+    //sending chat info: my_id & r_username
+    send_int(my_device.id, server.sd);
     send_msg(r_username, server.sd);
 
     //handshake: check if registered & if online
@@ -588,8 +593,6 @@ void chat_command(){
         // printf("[device] connection with '%s'\n", r_username);
         // printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
 
-        //todo: check if chat already opened
-
         add_dev(r_id, r_username, r_port);
         r_sd = create_chat_socket(r_id, r_port);
 
@@ -598,10 +601,15 @@ void chat_command(){
         send_msg(my_device.username, r_sd);
 
         printf("[device] Connected with '%s': you can now chat!\n", r_username);
+
+        //fix: waiting
+        sleep(2);
+        /*
         for(int i=3; i>0; i--){
             printf("[device] Chat starting in %d seconds...\r", i);
             sleep(1);
         }
+        */
         
         handle_chat(r_sd);
         close(r_sd);

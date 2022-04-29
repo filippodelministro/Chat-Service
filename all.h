@@ -12,6 +12,7 @@
 
 #define BUFFER_SIZE         4096
 #define COMMAND_LENGHT      1024
+#define WORD_SIZE           1024
 
 #define MAX_DEVICES         100    
 
