@@ -90,6 +90,12 @@ void read_command(){
     get_cmd:
     scanf("%s", cmd);
 
+    if(strncmp(cmd, "clear", 5) || strncmp(cmd, "cls", 3)){
+        system("clear");
+        prompt();
+        return;
+    }
+
     if(!strncmp(cmd, "help", 4))
         help_command();
     else if(!strncmp(cmd, "list", 4))

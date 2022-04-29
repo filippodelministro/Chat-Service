@@ -316,7 +316,7 @@ void handle_chat(int sock) {
                     //todo: convert in send_msg (remove BUFFER_SIZE)
                     send(sock, msg, BUFFER_SIZE, 0);
 
-                    if(check_chat_command(buffer)){
+                    if(!check_chat_command(buffer)){
                         
                     }
                     else{
@@ -629,7 +629,10 @@ void read_command(){
     //get commando from stdin
     scanf("%s", cmd);
 
-    //todo: add clear | cls command
+    if(strncmp(cmd, "clear", 5) || strncmp(cmd, "cls", 3)){
+        system("clear");
+        return;
+    }
 
     //signup and in allowed only if not connected
     //other command allowed only if connected
