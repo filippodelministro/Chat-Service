@@ -18,7 +18,7 @@ struct device{
     
     //not needed for device purpouse
     ////bool registred;
-    ////struct tm* tv;
+    ////char time[8];
 
     //chat info
     int msg_pend;
@@ -107,8 +107,8 @@ void create_srv_socket_tcp(int p){
         perror("[device] socket() error");
         exit(-1);
     }
-    //// if(setsockopt(server.sd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-    ////     perror("setsockopt(SO_REUSEADDR) failed");
+    if(setsockopt(server.sd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
 
     //address
     memset(&server.addr, 0, sizeof(server.addr));
@@ -240,13 +240,15 @@ bool check_chat_command(const char* cmd){
 
 void handle_chat(int sock) {
     int ret, i;
+    bool ok;
     char buffer[BUFFER_SIZE];       //buffer per memorizzare il messaggio scritto dall'utente
     
-    //// char msg[MSG_LEN];          //messaggio da inviare, formato: username [hh:mm:ss]: (msg)
-    //// char timest[8];              // dove metto il timestamp formattato
-    //// Variabili per il timestamp dei messaggi
-    //// time_t rawtime; 
-    //// struct tm *msg_time;
+    char msg[BUFFER_SIZE];          //messaggio da inviare, formato: username [hh:mm:ss]: (msg)
+    
+    // Variabili per il timestamp dei messaggi
+    time_t rawtime; 
+    struct tm *msg_time;
+    char timest[8];                 // dove metto il timestamp formattato
 
     FD_SET(sock, &master);
     fdmax = sock;
@@ -267,8 +269,10 @@ void handle_chat(int sock) {
                     scanf("%s", buffer);
                     if(check_chat_command(buffer))
                         send_msg(buffer, sock);
-                    else 
-                        exit(0);
+                    else{
+                        // exit(0);
+                        return;
+                    }
                 }
                 // Se è pronto il socket di comunicazione ho un messaggio da ricevere 
                 else if(i == sock){

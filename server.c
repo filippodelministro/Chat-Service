@@ -15,11 +15,10 @@ struct device{
     struct sockaddr_in addr;
     bool connected;
 
-    struct tm* tv;              //fix: stesso tv per ogni devices
+    char time[8];
     int id;
     char* username;
     char* password;
-    // time_t
 }devices[MAX_DEVICES];          //devices array
 
 int n_dev;                 //number of devices registred
@@ -53,16 +52,15 @@ void list_command(){
         printf("\tThere are no devices connected!\n");
     }
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\tsocket\n");
+    printf("\tdev_id\tusername\ttimestamp\tport\n");
         for(i=0; i<n_dev; i++){
-
+            
             struct device* d = &devices[i];
             if(d->connected){
-                printf("\t%d\t%s\t\t%d:%d:%d\t%d\t%d\n",
+                printf("\t%d\t%s\t\t%s\t%d\n",
                     d->id, d->username, 
-                    d->tv->tm_hour, d->tv->tm_min, d->tv->tm_sec,    
-                    d->port,
-                    d->sd
+                    d->time,    
+                    d->port
                 );
             }
         }
@@ -212,9 +210,11 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
 
         //handle timestamp
         time_t rawtime;
+        struct tm* tv;
         time(&rawtime);
-        d->tv = localtime(&rawtime);
-        
+        tv = localtime(&rawtime);
+        strftime(d->time, 9, "%X", tv);
+
         d->connected = true;
         n_conn++;
 
