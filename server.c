@@ -90,7 +90,7 @@ void read_command(){
     get_cmd:
     scanf("%s", cmd);
 
-    if(strncmp(cmd, "clear", 5) || strncmp(cmd, "cls", 3)){
+    if(!strncmp(cmd, "clear", 5) || !strncmp(cmd, "cls", 3)){
         system("clear");
         prompt();
         return;
@@ -306,8 +306,7 @@ void handle_request(){
 
     //fix: semmai fare una fork() qui
     switch (opcode){
-    case 0:                                                     
-        //SIGNUP BRANCH
+    case SIGNUP_OPCODE:                                                     
 
         //recevive username and password
         if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -327,8 +326,7 @@ void handle_request(){
         close(new_dev);
         prompt();
         break;
-    case 1:                            
-        //IN BRANCH              
+    case IN_OPCODE:                            
 
         //recevive username and password
         if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
@@ -353,22 +351,25 @@ void handle_request(){
         prompt();
         break;
 
-    case 2:
-        //HANGING BRANCH
+    case LIST_OPCODE:
+        printf("LIST_BRANCH!!\n");
+
+        prompt();
+        break;
+
+    case HANGING_OPCODE:
         printf("HANGING BRANCH!\n");
 
         
 
         break;
 
-    case 3:
-        //SHOW BRANCH
+    case SHOW_OPCODE:
         printf("SHOW BRANCH!\n");
 
         break;
 
-    case 4:
-        //CHAT BRANCH
+    case CHAT_OPCODE:
         printf("CHAT BRANCH!\n");
 
         //receive sender & receiver info
@@ -421,22 +422,30 @@ void handle_request(){
         prompt();
         break;
 
-    case 5:
+    case SHARE_OPCODE:
         printf("SHARE BRANCH!\n");
 
         break;
 
-    case 6:
+    case OUT_OPCODE:
         //get id from device
         id = recv_int(new_dev);
         printf("id ricevuto: %d", id);
+        struct device* d = &devices[id];
 
-        //todo: check for autentichation (recv)
+        //get username & password for autentication
+        recv_msg(new_dev, username);
+        recv_msg(new_dev, password);
+        if(strcmp(d->username, username) || strcmp(d->password, password)){
+            printf("[server] authentication failed: OUT not safe!\n");
+            send_int(ERR_CODE, new_dev);
+            return;
+        }
 
         //send ACK to safe disconnect
-        send_int(id, new_dev);            
+        send_int(OK_CODE, new_dev);            
         
-        struct device* d = &devices[id];
+        //update device info
         d->connected = false;
         n_conn--;
 

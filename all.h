@@ -17,11 +17,12 @@
 
 #define SIGNUP_OPCODE       0
 #define IN_OPCODE           1
-#define HANGING_OPCODE      2
-#define SHOW_OPCODE         3
-#define CHAT_OPCODE         4
-#define SHARE_OPCODE        5
-#define OUT_OPCODE          6
+#define LIST_OPCODE         2
+#define HANGING_OPCODE      3
+#define SHOW_OPCODE         4
+#define CHAT_OPCODE         5
+#define SHARE_OPCODE        6
+#define OUT_OPCODE          7
 
 #define ERR_CODE            65535
 #define OK_CODE             65534

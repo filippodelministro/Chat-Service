@@ -380,11 +380,12 @@ void handle_request(){
 //prompt an help list message on stdout
 void help_command(){
 	printf( "Type a command:\n"
-            "1) hanging   --> receive old msg\n"
-            "2) show      --> ??\n"
-            "3) chat      --> ??\n"
-            "4) share     --> ??\n"
-            "5) out       --> ??\n"
+            "1) list         --> show registered users\n"
+            "2) hanging      --> receive old messages\n"
+            "3) show <user>  --> show pending messages from <user>\n"
+            "4) chat <user>  --> open chat with <user>\n"
+            "5) share <user> --> share file with <user>??\n"
+            "6) out          --> logout\n"
     );
 }
 
@@ -496,6 +497,21 @@ void in_command(){
     
     memset(buffer, 0, sizeof(buffer));
     close(server.sd);
+}
+
+void list_command(){
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, sizeof(buffer));
+
+    create_srv_socket_tcp(server.port);
+
+    //send opcode to server and wait for ack
+    send_opcode(LIST_OPCODE);
+    sleep(1);
+
+
+
+
 }
 
 void hanging_command(){
@@ -610,9 +626,12 @@ void out_command(){
 
     //send dev_id to server
     send_int(my_device.id, server.sd);
+    //sending username & password for autentication
+    send_msg(my_device.username, server.sd);
+    send_msg(my_device.password, server.sd);
     
     //wait ACK from server to safe disconnect
-    if(recv_int(server.sd) == my_device.id){
+    if(recv_int(server.sd) == OK_CODE){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
@@ -629,7 +648,8 @@ void read_command(){
     //get commando from stdin
     scanf("%s", cmd);
 
-    if(strncmp(cmd, "clear", 5) || strncmp(cmd, "cls", 3)){
+    
+    if(!strncmp(cmd, "clear", 5) || !strncmp(cmd, "cls", 3)){
         system("clear");
         return;
     }
@@ -658,6 +678,8 @@ void read_command(){
             help_command();
         }
     }
+    else if (!strncmp(cmd, "list", 4) && my_device.connected)	
+		list_command();
 	else if (!strncmp(cmd, "hanging", 7) && my_device.connected)	
 		hanging_command();
     else if (!strncmp(cmd, "show", 4) && my_device.connected)	
