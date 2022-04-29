@@ -366,14 +366,16 @@ void handle_request(){
         printf("CHAT BRANCH!\n");
 
         //receive sender & receiver info
-        int id_sender, id_receiver;
-        id_sender = recv_int(new_dev);
+        int r_id, s_id;
+        //todo: name sender and receiver
+        //todo: char* s_username, r_username
+        s_id = recv_int(new_dev);
         recv_msg(new_dev, username);
 
-        id_receiver = find_device(username);
+        r_id = find_device(username);
 
         //check if receiver is registered
-        if(id_receiver == -1){
+        if(r_id == -1){
             printf("[server] receiver does not exist...\nsending ERR_CODE\n");    
             send_int(ERR_CODE, new_dev);
             goto chat_end;
@@ -382,24 +384,31 @@ void handle_request(){
             printf("[server] chat request:\n"
                 "\tsender_id: %d\n"
                 "\treceiver_id: %d\n",
-                id_sender, id_receiver
+                s_id, r_id
             );
             //sending receiver's port
             send_int(OK_CODE, new_dev);
         }
 
         //manage chat in different situation
-        if(devices[id_receiver].connected){
+        if(devices[r_id].connected){
             //request device is online: sending destination info (port and id)
-            send_int(devices[id_receiver].port, new_dev);
-            send_int(id_receiver, new_dev);
+            send_int(devices[r_id].port, new_dev);
+            send_int(r_id, new_dev);
 
         }
         else{
             //request device is offline: server manage chat with new_dev  
             send_int(my_port, new_dev);
-            //todo: sever has to manage chat with new_dev
 
+            printf("receiver is offline: getting messages from sender!\n");
+            while((recv_int2(new_dev, false)) == OK_CODE){
+                //todo: convert in send_msg (remove BUFFER_SIZE)
+                ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
+                //todo: make it invisible for server
+                //todo: save messages in a file for receiver
+                printf("%s", buffer);
+            }
         }
 
     chat_end:
