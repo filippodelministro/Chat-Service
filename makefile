@@ -1,13 +1,13 @@
 # primary make rule: doesnt create any file but needed to build target file                                                                              
-all: dev server  
+all: dev server #reset gdb
  
 # make rule for client file 
 client: dev.o 
-	gcc -Wall dev.c -o dev 
+	gcc -Wall dev.o -o dev 
  
 # make rule for server file
 server: server.o 
-	gcc -Wall server.c -o server 
+	gcc -Wall server.o -o server 
 
  
 # remove ojbect file reate durign compilation ('make reset' to execute)

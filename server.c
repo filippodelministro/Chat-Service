@@ -403,7 +403,7 @@ void handle_request(){
             printf("\n\n[server] chat request:\n"
                 "\tsender: %s\t[%d]\n"
                 "\treceiver: %s\t[%d]\n",
-                r_username, r_id, s_username, s_id
+                s_username, s_id, r_username, r_id
             );
             //sending receiver's port
             send_int(OK_CODE, new_dev);
