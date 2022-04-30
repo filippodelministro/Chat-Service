@@ -59,29 +59,31 @@ void boot_message(){
 //*                             FUNCTIONS                               ///
 //* ///////////////////////////////////////////////////////////////////////
 
-void list_contacts(){
-    int i;
-    int n_conn = 0;
+/*
+// void list_contacts(){
+//     int i;
+//     int n_conn = 0;
 
-    for(i=0; i<MAX_DEVICES; i++){
-        if(devices[i].connected)
-            n_conn++;            
-    }
+//     for(i=0; i<MAX_DEVICES; i++){
+//         if(devices[i].connected)
+//             n_conn++;            
+//     }
 
-    printf("\n[list_device] %u devices online\n", n_conn);
-    printf("\tdev_id\tusername\tport\tsocket\n");
-        for(i=0; i<MAX_DEVICES; i++){
+//     printf("\n[list_device] %u devices online\n", n_conn);
+//     printf("\tdev_id\tusername\tport\tsocket\n");
+//         for(i=0; i<MAX_DEVICES; i++){
 
-            struct device* d = &devices[i];
-            if(d->connected){
-                printf("\t%d\t%s\t\t%d\t%d\n",
-                    d->id, d->username, 
-                    d->port,
-                    d->sd
-                );
-            }
-        }
-}
+//             struct device* d = &devices[i];
+//             if(d->connected){
+//                 printf("\t%d\t%s\t\t%d\t%d\n",
+//                     d->id, d->username, 
+//                     d->port,
+//                     d->sd
+//                 );
+//             }
+//         }
+// }
+*/
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
@@ -174,9 +176,6 @@ int create_chat_socket(int id, int port){
         exit(-1);
     }
 
-    //// struct device* d = &devices[id];
-    //// list_contacts();
-
     return devices[id].sd;
 }
 
@@ -244,7 +243,7 @@ void handle_chat_w_server(){
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
     
-    // Variabili per il timestamp dei messaggi
+    //Handle time value
     time_t rawtime; 
     struct tm *msg_time;
     char tv[8];                 
@@ -274,7 +273,6 @@ void handle_chat_w_server(){
         send(server.sd, buffer, BUFFER_SIZE, 0);
         
     }
-    
 }
 
 void handle_chat(int sock) {
@@ -334,13 +332,17 @@ void handle_chat(int sock) {
                             //todo: handle this case
                             printf("Other device quit!\n");
                             FD_CLR(sock, &master);
+                            close(sock);
                             return;
                         }
                         printf("%s", buffer);
                     }
                     else{
-                        printf("Other device quit!\n");
+                        printf("[device] Other device quit...\n");
+                        sleep(1);
+                        printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
+                        close(sock);
                         return;
                     }
                 }
@@ -368,7 +370,7 @@ void handle_request(){
     
     printf("[device] Received conncection request from '%s'\n", s_username);
     //fix: waiting
-    sleep(2);
+    sleep(1);
     /*
     for(int i=3; i>0; i--){
         printf("[device] Chat starting in %d seconds...\r", i);
@@ -609,7 +611,7 @@ void chat_command(){
         printf("[device] Connected with '%s': you can now chat!\n", r_username);
 
         //fix: waiting
-        sleep(2);
+        sleep(1);
         /*
         for(int i=3; i>0; i--){
             printf("[device] Chat starting in %d seconds...\r", i);
@@ -780,7 +782,7 @@ int main(int argc, char* argv[]){
                     // i = recv_int(server.sd);
                     // printf("[device] TEST: received %d\n", i);
 
-                    // printf("\t\ti == server.sd\n");
+                    printf("\t\ti == server.sd\n");
 
                 }
 
