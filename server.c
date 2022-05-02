@@ -352,22 +352,6 @@ void handle_request(){
         prompt();
         break;
 
-    case LIST_OPCODE:
-        
-        //sending number of device, then username of each device
-        send_int(n_dev, new_dev);
-        for(int i=0; i<n_dev; i++){
-            d = &devices[i];
-            send_msg(d->username, new_dev);
-
-            //sending ONLINE or OFFLINE
-            ret = ((d->connected) ? OK_CODE : ERR_CODE);
-            send_int(ret, new_dev);
-        }
-
-        prompt();
-        break;
-
     case HANGING_OPCODE:
         printf("HANGING BRANCH!\n");
 
@@ -434,6 +418,11 @@ void handle_request(){
         prompt();
         break;
 
+    case GROUPCHAT_CODE:
+        printf("GROUPCHAT BRANCH!\n");
+
+        break;
+
     case SHARE_OPCODE:
         printf("SHARE BRANCH!\n");
 
@@ -465,6 +454,23 @@ void handle_request(){
 
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);
+        prompt();
+        break;
+
+    case UPDATE_OPCODE:
+        
+        //sending number of device, then username of each device
+        send_int(n_dev, new_dev);
+        for(int i=0; i<n_dev; i++){
+            d = &devices[i];
+            send_msg(d->username, new_dev);
+            send_int(d->port, new_dev);
+
+            //sending ONLINE or OFFLINE
+            ret = ((d->connected) ? OK_CODE : ERR_CODE);
+            send_int(ret, new_dev);
+        }
+
         prompt();
         break;
 
