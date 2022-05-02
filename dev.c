@@ -223,19 +223,37 @@ int find_device_from_socket(int sd){
 }
 
 //*manage chats
-bool check_chat_command(const char* cmd){
+void list_command();
+void chat_command();
+bool check_chat_command(char* cmd){
+    char user[WORD_SIZE];
+
     if(!strncmp(cmd, "\\q", 2)){
-        printf("[read_chat_command] QUIT!\n");
+        printf("[read_chat_command] Quit chat!\n");
         return true;
     }
     else if(!strncmp(cmd, "\\a", 2)){
-        printf("[read_chat_command] ADD!\n");
-        //todo: add another device
-
+        //todo: add another device  
+        printf("[device] Type <user> to add to this chat.\n[device] <user> has to be online!\n");
+        list_command();
+        scanf("%s", user);
+        printf("[read_chat_command] Add '%s' to chat!\n", user);
+        printf("DA FARE\n");
+        // chat_command();
         return true;
     }
 
     return false;
+}
+void append_time(char * buffer, char *msg){
+    time_t rawtime; 
+    struct tm *msg_time;
+    char tv[8];  
+
+    time(&rawtime);
+    msg_time = localtime(&rawtime);
+    strftime(tv, 9, "%X", msg_time);
+    sprintf(buffer, "%s [%s]: %s", my_device.username, tv, msg);
 }
 
 void handle_chat_w_server(){
@@ -264,10 +282,7 @@ void handle_chat_w_server(){
         if(code == ERR_CODE)
             break;
 
-        time(&rawtime);
-        msg_time = localtime(&rawtime);
-        strftime(tv, 9, "%X", msg_time);
-        sprintf(buffer, "%s [%s]: %s", my_device.username, tv, msg);
+        append_time(buffer, msg);
         
         //todo: convert in send_msg (remove BUFFER_SIZE)
         send(server.sd, buffer, BUFFER_SIZE, 0);
@@ -275,15 +290,12 @@ void handle_chat_w_server(){
     }
 }
 
+
 void handle_chat(int sock) {
     int code, ret, i;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
-    
-    //Handle time value
-    time_t rawtime; 
-    struct tm *msg_time;
-    char tv[8];                 
+    //// bool first_interaction = true;
 
     FD_SET(sock, &master);
     fdmax = sock;
@@ -297,8 +309,9 @@ void handle_chat(int sock) {
         }
         for (i = 0; i <= fdmax; i++) {
 			if(FD_ISSET(i, &read_fds)) {
-                if (i == 0) {                    
+                if (i == 0) {
                     //keyboard: sending message
+                    //fix: double user [time] at first send
                     //todo: force to remain in same line
                     // printf("[%s]: ", my_device.username);
                     fgets(msg, BUFFER_SIZE, stdin);
@@ -311,11 +324,7 @@ void handle_chat(int sock) {
                         return;
                     }
 
-                    time(&rawtime);
-                    msg_time = localtime(&rawtime);
-                    strftime(tv, 9, "%X", msg_time);
-                    sprintf(buffer, "%s [%s]: %s", my_device.username, tv, msg);
-                    
+                    append_time(buffer, msg);
                     //send in any case message: if command, inform other device
                     //todo: convert in send_msg (remove BUFFER_SIZE)
                     send(sock, buffer, BUFFER_SIZE, 0);
