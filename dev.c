@@ -195,7 +195,7 @@ void dev_init(int id, const char* usr, const char* pswd){
                     "\t dev_id: %u \n"
                     "\t username: %s \n"
                     "\t password: %s\n",
-                    my_device.id, my_device.username, my_device.password
+                    d->id, d->username, d->password
     );
 }
 
@@ -229,28 +229,19 @@ void update_devices(){
     close(server.sd);
 }
 
-//// int find_device_from_socket(int sd){
-////     // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
-////     for(int i=0; i<MAX_DEVICES; i++){
-////         struct device *d = &devices[i];
-//        
-////         if(d->sd == sd && d->connected)
-////             return i;    
-////     }
-//
-////     return -1;      //not found
-//// }
-int find_device(const char* usr){
-    // printf("[device] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
-    for(int i=0; i<n_dev; i++){
+int find_device_from_socket(int sd){
+    int i;
+
+    // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
+    for(i=0; i<MAX_DEVICES; i++){
         struct device *d = &devices[i];
         
-        if(!strcmp(d->username, usr))
+        if(d->sd == sd && d->connected)
             return i;    
     }
+
     return -1;      //not found
 }
-
 
 //*manage chats
 void list_command();
@@ -265,9 +256,8 @@ bool check_chat_command(char* cmd){
     else if(!strncmp(cmd, "\\a", 2)){
         //add new device to chat
         printf("[device] Type <user> to add to this chat.\n[device] <user> has to be online!\n");
-        // list_command();
-        // scanf("%s", user);
-        chat_command();
+        list_command();
+        scanf("%s", user);
         printf("[read_chat_command] Add '%s' to chat!\n", user);
         //todo: add check Y/N to connect
         return true;
@@ -275,7 +265,6 @@ bool check_chat_command(char* cmd){
 
     return false;
 }
-
 void append_time(char * buffer, char *msg){
     time_t rawtime; 
     struct tm *msg_time;
@@ -292,6 +281,11 @@ void handle_chat_w_server(){
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
     
+    //Handle time value
+    time_t rawtime; 
+    struct tm *msg_time;
+    char tv[8];                 
+
     printf("[handle_chat_w_server]\n");
     sleep(1);
     system("clear");
@@ -316,7 +310,7 @@ void handle_chat_w_server(){
     }
 }
 
-void handle_chat(int sock){
+void handle_chat(int sock) {
     int code, ret, i;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
@@ -373,7 +367,7 @@ void handle_chat(int sock){
                     }
                     else{
                         printf("[device] Other device quit...\n");
-                        sleep(1);
+                        // sleep(1);
                         printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
                         close(sock);
@@ -383,16 +377,7 @@ void handle_chat(int sock){
             }
         }
     }
-}
-
-void create_chat(int id){
-    struct device* d = &devices[id];
-    int port = d->port;
-
-    d->sd = create_chat_socket(id, port);
-
-    //sending my_device id to receiver
-    send_int(my_device.id, d->sd);
+    
 }
 
 void handle_request(){
@@ -402,17 +387,15 @@ void handle_request(){
     char s_username[BUFFER_SIZE];
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
-    struct device* d;
-
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
+
+    //receive sender info
     s_id = recv_int2(s_sd, false);
-    //todo: authentication
+    s_port = recv_int2(s_sd, false);
+    recv_msg2(s_sd, s_username, false);
+    // update_dev(s_id, s_username, s_port);
 
-    update_devices();
-    d = &devices[s_id];
-    d->sd = s_sd;
-
-    printf("[device] Received conncection request from '%s'\n", d->username);
+    printf("[device] Received conncection request from '%s'\n", s_username);
     
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
@@ -426,8 +409,30 @@ void handle_request(){
     }
     */
     
-    handle_chat(d->sd);  
-    close(d->sd);
+    handle_chat(s_sd);
+    close(s_sd);
+}
+
+
+//create a chat with devices passed in chat_devices [n_dev] 
+void create_chat(int n_dev, int* chat_devices){
+    struct device* d;
+
+    printf("[create_chat] received chat_devices:\n");
+    for(int i=0; i<n_dev; i++)
+        printf("%d\n", chat_devices[i]);
+
+    printf("[create_chat] chat request for following devices:\n");
+    printf("\tid:\tusername:\tport\tonline\n");
+    for(int i=0; i<n_dev; i++){
+        if(i != my_device.id){
+            int id = chat_devices[i];
+            d = &devices[id];
+            printf("\t%d\t%s\t\t%d\tDAFARE\n",   //todo: online
+                d->id, d->username, d->port
+            );
+        }
+    }
 }
 
 //What a device user can use to interact with device
@@ -442,9 +447,9 @@ void help_command(){
             "2) hanging      --> receive old messages\n"
             "3) show <user>  --> show pending messages from <user>\n"
             "4) chat <user>  --> open chat with <user>\n"
-            "5) groupchat    --> open a groupchat with multiple devices\n"
-            "6) share <user> --> share file with <user>\n"
-            "7) out          --> logout\n"
+            //todo: groupchat
+            "5) share <user> --> share file with <user>??\n"
+            "6) out          --> logout\n"
     );
 }
 
@@ -516,14 +521,12 @@ void in_command(){
     scanf("%s", password);
 
     //prompt confermation message
-    /*
     printf("[device] in_command: got your data! \n"
         "\t srv_port: %d \n"
         "\t username: %s \n"
         "\t password: %s\n",
         server.port, username, password
     );
-    */
 
     create_srv_socket_tcp(server.port);
 
@@ -561,22 +564,20 @@ void in_command(){
 }
 
 void list_command(){
-    update_devices();
     struct device* d;
 
+    update_devices();
+
     //// printf("-------------------------------------------------\n");
-    printf("\tid\tusername\tport\tonline\t\n");
+    printf("|\tid\tusername\tport\tonline\t|\n");
     //// printf("-------------------------------------------------\n");
     for(int i=0; i<n_dev; i++){
-        if(i == my_device.id)
-            printf("==>");
-        
         d = &devices[i];
-        printf("\t%d\t%s\t\t%d\t[",
+        printf("|\t%d\t%s\t\t%d\t[",
             d->id, d->username, d->port
         );
-        if(d->connected) printf("x]\t\n");
-        else printf(" ]\t\n");
+        if(d->connected) printf("x]\t|\n");
+        else printf(" ]\t|\n");
     }
     //// printf("-------------------------------------------------\n");
 }
@@ -608,10 +609,8 @@ void show_command(){
 }
 
 void chat_command(){
-    char r_username[WORD_SIZE];
-    int r_id;
-    struct device* d;
-
+    char r_username[BUFFER_SIZE];
+    int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
     //check to avoid self-chat
@@ -620,69 +619,75 @@ void chat_command(){
 	    return;
     } 
 
-    update_devices();
-    r_id = find_device(r_username);
+    //first handshake
+    create_srv_socket_tcp(server.port);
+    send_opcode(CHAT_OPCODE);
+    sleep(1);
 
-    //check if device is registered     
-    if(r_id == -1)
-        {printf("[device] device '%s' not found!\n", r_username);
+    //sending chat info: my_id & r_username
+    send_int(my_device.id, server.sd);
+    send_msg(r_username, server.sd);
+
+    //handshake: check if registered & if online
+    if(recv_int(server.sd) == ERR_CODE){
+        printf("[device] user '%s' does not exists!\n", r_username);
         goto chat_end;
     }
 
-    d = &devices[r_id];
-    if(!d->connected){
+    //receive port: chat with server if recv_device is not online
+    r_port = recv_int(server.sd);
+    if(r_port == server.port){
         //device is not online: chatting with server
-        printf("[device] user '%s' is not online: sending messages to server!\n", d->username);
-        handle_chat_w_server();
+        printf("[device] user '%s' is not online: sending messages to server!\n", r_username);
+
+        handle_chat_w_server();   
     }
     else{
         //device is online: chatting with him
-        create_chat(d->id);
-        handle_chat(d->sd);
+        r_id = recv_int(server.sd);
+        // printf("[device] connection with '%s'\n", r_username);
+        // printf("\tport:\t%d\n\tid:\t%d\n", r_port, r_id);
+
+        // update_dev(r_id, r_username, r_port);
+        update_devices();
+        r_sd = create_chat_socket(r_id, r_port);
+
+        //sending information
+        send_int(my_device.id, r_sd);
+        send_int(my_device.port, r_sd); 
+        send_msg(my_device.username, r_sd);
+
+        printf("[device] Connected with '%s': you can now chat!\n", r_username);
+
+        //fix: waiting
+        sleep(1);
+        /*
+        for(int i=3; i>0; i--){
+            printf("[device] Chat starting in %d seconds...\r", i);
+            sleep(1);
+        }
+        */
+        
+        handle_chat(r_sd);
+        close(r_sd);
     }
+
 
     chat_end:
     printf("COMANDO CHAT ESEGUITO \n");
     close(server.sd);
 }
 
-
 void groupchat_command(){
     //first handshake
-    int i, id, n_dev_chat = 0;
-    char username[WORD_SIZE];
-    struct device* d;
-
-    system("clear");
-    list_command();
+    create_srv_socket_tcp(server.port);
+    send_opcode(GROUPCHAT_CODE);
     sleep(1);
 
-    printf("[device] Insert number of devices: ");
-    scanf("%d", &n_dev_chat);
-    printf("[device] Insert <user> to connect with: [%d expected]\n", n_dev_chat++);
-    int chat_device_id[n_dev_chat];       //contains all the dev_id in chat
-    chat_device_id[0] = my_device.id;
+    int prova[3] = {0, 1, 2};
 
-    //get <user> for <n_dev> times: check if <user> exists and if online
-    for(i=1; i<n_dev_chat; i++){
-        scanf("%s", username);
-        id = find_device(username);
-        if(id == -1){
-            printf("[device] device '%s' not found!\n[device] closing groupchat...\n", username);
-            goto groupchat_end;
-        }
-        if(!devices[id].connected){
-            printf("[device] device '%s' not online!\n[device] closing groupchat...\n", username);
-            goto groupchat_end;
-        }
+    create_chat(3, prova);
 
-        //if here device is registered and online
-        chat_device_id[i] = id;
-    }
-    
-    // create_chat(n_dev_chat, chat_device_id);
-
-    groupchat_end:
     printf("COMANDO GROUPCHAT ESEGUITO \n");
 }
 
@@ -834,7 +839,6 @@ int main(int argc, char* argv[]){
                 else if(i == listening_socket){
                     //connection request
                     handle_request();
-                    // handle_request2();
                 }
                 
                 else if(i == server.sd){
