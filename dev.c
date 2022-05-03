@@ -383,127 +383,6 @@ void handle_chat(int sock){
     }
 }
 
-
-void handle_chat2(int n_dev_chat, int* sock){
-    int code, ret, i;
-    char msg[BUFFER_SIZE];          //message to send
-    char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
-    //// bool first_interaction = true;
-
-    for(int i_sock=0; i_sock<n_dev_chat; i_sock++){
-        FD_SET(sock[i_sock], &master);
-        fdmax = sock[i_sock];
-    }
-    system("clear");
-
-    while(true){
-        read_fds = master; 
-        if(!select(fdmax + 1, &read_fds, NULL, NULL, NULL)){
-			perror("[handle_chat] Error: select()\n");
-			exit(-1);
-        }
-        for (i = 0; i <= fdmax; i++) {
-			if(FD_ISSET(i, &read_fds)) {
-                if (i == 0) {
-                    //keyboard: sending message
-                    //fix: double user [time] at first send
-                    //todo: force to remain in same line
-                    // printf("[%s]: ", my_device.username);
-                    fgets(msg, BUFFER_SIZE, stdin);
-
-                    //sending until user type "\q"
-                    code = ((check_chat_command(msg)) ? ERR_CODE : OK_CODE);
-                    for(int i_sock=0; i<n_dev_chat; i++)
-                        send_int(code, sock[i_sock]);
-                    if(code == ERR_CODE){
-                        for(int i_sock=0; i<n_dev_chat; i++)
-                            FD_CLR(sock[i_sock], &master);
-                        return;
-                    }
-
-                    append_time(buffer, msg);
-                    //send in any case message: if command, inform other device
-                    //todo: convert in send_msg (remove BUFFER_SIZE)
-                    for(int i_sock=0; i<n_dev_chat; i++)
-                        send(sock[i_sock], buffer, BUFFER_SIZE, 0);
-                }
-                else{
-                    // received message
-                    //todo: find device who is sending message
-                    // ret = find_device_from_socket(sock);
-                    // printf("[%s]: ", devices[ret].username);
-                    //todo: convert in recv_msg (remove BUFFER_SIZE)
-                    //receive messages until other user type '\q'
-                    if((recv_int2(sock[i], false)) == OK_CODE){
-                        if(recv(sock[i], (void*)buffer, BUFFER_SIZE, 0) == 0){
-                            //todo: handle this case
-                            printf("Other device quit!\n");
-                            for(int i_sock=0; i<n_dev_chat; i++){
-                                FD_CLR(sock[i_sock], &master);
-                                close(sock[i_sock]);
-                            }
-                            return;
-                        }
-                        printf("%s", buffer);
-                    }
-                    else{
-                        printf("[device] Other device quit...\n");
-                        sleep(1);
-                        printf("[device] Closing chat\n");
-
-                        for(int i_sock=0; i<n_dev_chat; i++){
-                                FD_CLR(sock[i_sock], &master);
-                                close(sock[i_sock]);
-                        }
-                        return;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void handle_request2(){
-    printf("[handle_request2]\n");
-    int n_dev_chat = 1;                 //fix
-    int sock[n_dev_chat];
-    struct device* d;
-    
-    update_devices();
-
-    for(int i=0; i<n_dev_chat; i++){
-        int s_id;
-        struct sockaddr_in s_addr;
-        socklen_t addrlen = sizeof(s_addr);    
-
-        sock[i] = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
-        s_id = recv_int2(sock[i], false);
-
-        d = &devices[s_id];
-        d->sd = sock[i];
-        
-        printf("[device] Received conncection request from '%s'\n", d->username);
-
-    }
-
-    
-    //todo: add check Y/N to connect (handle d->connected)
-    //todo: manage history of chat
-    sleep(1);
-    //fix: waiting
-    /*
-    for(int i=3; i>0; i--){
-        printf("[device] Chat starting in %d seconds...\r", i);
-        sleep(1);
-    }
-    */
-    
-    handle_chat2(n_dev_chat, sock);
-
-    for(int i=0; i<n_dev_chat; i++)
-        close(sock[i]);
-}
-
 void handle_request(){
     printf("[handle_request]\n");
 
@@ -533,38 +412,156 @@ void handle_request(){
     }
     */
     
-    handle_chat(s_sd);
+    handle_chat(s_sd);  
     close(s_sd);
 }
 
+void handle_chat2(int n_dev_chat, int* sock){
+    int code, ret, i;
+    char msg[BUFFER_SIZE];          //message to send
+    char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
+    //// bool first_interaction = true;
+
+    printf("[handle_chat2]\n");
+
+    for(int i_sock=0; i_sock<n_dev_chat; i_sock++){
+        FD_SET(sock[i_sock], &master);
+        fdmax = ((sock[i_sock] > fdmax) ? sock[i_sock] : fdmax);
+    }
+    // system("clear");
+
+    while(true){
+        read_fds = master; 
+        if(!select(fdmax + 1, &read_fds, NULL, NULL, NULL)){
+			perror("[handle_chat] Error: select()\n");
+			exit(-1);
+        }
+        for (i = 0; i <= fdmax; i++) {
+			if(FD_ISSET(i, &read_fds)) {
+                if (!i) {
+                    //keyboard: sending message
+                    
+                    for(int i_sock=0; i<n_dev_chat; i++)
+                        send_int(133, sock[i_sock]);
+                }
+                else if(i){
+                    // received message
+                    //receive messages until other user type '\q'
+                    if((recv_int2(sock[i], false)) == OK_CODE){
+                        if(recv(sock[i], (void*)buffer, BUFFER_SIZE, 0) == 0){
+                            //todo: handle this case
+                            printf("Other device quit!\n");
+                            for(int i_sock=0; i<n_dev_chat; i++){
+                                FD_CLR(sock[i_sock], &master);
+                                close(sock[i_sock]);
+                            }
+                            return;
+                        }
+                        printf("%s", buffer);
+                    }
+                    else{
+                        printf("[device] Other device quit...\n");
+                        sleep(1);
+                        printf("[device] Closing chat\n");
+
+                        for(int i_sock=0; i<n_dev_chat; i++){
+                            FD_CLR(sock[i_sock], &master);
+                            close(sock[i_sock]);
+                        }
+                        return;
+                    }
+                    recv_int(sock[i]);
+                   
+                }
+            }
+        }
+    }
+}
+
+void handle_request2(){
+    printf("[handle_request2]\n");
+    int first_dev_sock, first_dev, n_dev_chat;
+    struct sockaddr_in f_addr;
+    socklen_t addrlen = sizeof(f_addr);    
+    struct device* d;
+    
+    update_devices();
+    sleep(1);
+
+    //first connection: receive number of devices in chat
+    first_dev_sock = accept(listening_socket, (struct sockaddr*)&f_addr, &addrlen);
+    n_dev_chat = recv_int(first_dev_sock);
+
+    // first_dev = recv_int(first_dev_sock);
+    // devices[first_dev].sd = first_dev_sock;
+
+    printf("[handle_request2] chat with %d devices: \n", n_dev_chat);
+    int chat_devices_id[n_dev_chat];    
+    for(int i=0; i<n_dev_chat; i++){    
+        //receive dev_id of devices in chat
+        chat_devices_id[i] = recv_int(first_dev_sock);
+        int id = chat_devices_id[i];
+        printf("\tid: %d\tusername: %s\n", id, devices[id].username);
+    }
+    
+    
+    // int s_id;
+    // struct sockaddr_in s_addr;
+    // socklen_t addrlen = sizeof(s_addr);    
+    int sock[n_dev_chat];           //socket array: one for each device
+    sock[0] = first_dev_sock;       //first device is already connected
+
+    
+    //todo: add check Y/N to connect (handle d->connected)
+    //todo: manage history of chat
+    sleep(1);
+    
+    // handle_chat2(n_dev_chat, sock);
+
+    // for(int i=0; i<n_dev_chat; i++)
+    //     close(sock[i]);
+}
 
 
-void create_chat(int n_dev_chat, int chat_devices[n_dev_chat]){
+void create_chat(int n_dev_chat, int chat_devices_id[n_dev_chat]){
 //create a chat with devices passed in chat_devices [n_dev] 
     int sock[n_dev_chat];
     struct device* d;
+
+    //----------------------------------------------------------
+    printf("[create_chat] DA LEVARE\n");
+    printf("n_dev_chat = %d\n", n_dev_chat);
+    for(int i=0;i<n_dev_chat; i++)
+        printf("chat_devices[%i] = %d\n", i, chat_devices_id[i]);
+    printf("\n");
+    //----------------------------------------------------------
+
 
     printf("[create_chat] chat request for following devices:\n");
     printf("\tid\tusername\tport\n");
 
     //create a socket for each device and sending my_device info
     for(int i=0; i<n_dev_chat; i++){
-        int id = chat_devices[i];   //get id of device to connect with and use in find right device_
+        int id = chat_devices_id[i];   //get id of device to connect with and use in find right device_
         d = &devices[id];
         printf("\t%d\t%s\t\t%d\n", d->id, d->username, d->port);
+        
+        if(id != my_device.id){
+            d->sd = create_chat_socket(d->id, d->port);
 
-        d->sd = create_chat_socket(d->id, d->port);
+            //sending number of devices in chat
+            send_int(n_dev_chat, d->sd);
 
-        //sending information
-        send_int(my_device.id, d->sd);
-        //// send_int(my_device.port, d->sd); 
-        //// send_msg(my_device.username, d->sd);
+            //sending to each chat device, each dev_ID of devices in chat
+            for(int j=0; j<n_dev_chat; j++)
+                send_int(chat_devices_id[j], d->sd);
+        }
     }
 
-    handle_chat2(n_dev_chat, sock);
+    // handle_chat2(n_dev_chat, sock);
 
-    for(int i=0; i<n_dev_chat; i++)
-        close(sock[i]);
+    // for(int i=0; i<n_dev_chat; i++)
+    //     close(sock[i]);
 }
 
 //What a device user can use to interact with device
@@ -826,11 +823,12 @@ void groupchat_command(){
 
     printf("[device] Insert number of devices: ");
     scanf("%d", &n_dev_chat);
-    printf("[device] Insert <user> to connect with: [%d expected]\n", n_dev_chat);
-    int chat_devices[n_dev_chat];
+    printf("[device] Insert <user> to connect with: [%d expected]\n", n_dev_chat++);
+    int chat_device_id[n_dev_chat];       //contains all the dev_id in chat
+    chat_device_id[0] = my_device.id;
 
     //get <user> for <n_dev> times: check if <user> exists and if online
-    for(i=0; i<n_dev_chat; i++){
+    for(i=1; i<n_dev_chat; i++){
         scanf("%s", username);
         id = find_device(username);
         if(id == -1){
@@ -843,10 +841,10 @@ void groupchat_command(){
         }
 
         //if here device is registered and online
-        chat_devices[i] = id;
+        chat_device_id[i] = id;
     }
     
-    create_chat(n_dev_chat, chat_devices);
+    create_chat(n_dev_chat, chat_device_id);
 
     groupchat_end:
     printf("COMANDO GROUPCHAT ESEGUITO \n");
