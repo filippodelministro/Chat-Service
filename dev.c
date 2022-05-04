@@ -244,6 +244,20 @@ int find_device_from_socket(int sd){
     return -1;      //not found
 }
 
+int find_device(const char* usr){
+    int i;
+
+    printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(!strcmp(d->username, usr))
+            return i;    
+    }
+
+    return -1;      //not found
+}
+
 //*manage chats
 void list_command();
 void chat_command();
