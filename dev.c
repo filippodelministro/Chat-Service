@@ -367,7 +367,7 @@ void handle_chat(int sock) {
                     }
                     else{
                         printf("[device] Other device quit...\n");
-                        // sleep(1);
+                        sleep(1);
                         printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
                         close(sock);
@@ -841,14 +841,16 @@ int main(int argc, char* argv[]){
                     handle_request();
                 }
                 
+                /*
                 else if(i == server.sd){
                     //connection request by server
                     // i = recv_int(server.sd);
                     // printf("[device] TEST: received %d\n", i);
 
-                    printf("\t\ti == server.sd\n");
+                    // printf("\t\ti == server.sd\n");
 
                 }
+                */
 
                 //clear buffer and prompt
                 memset(buffer, 0, BUFFER_SIZE);
