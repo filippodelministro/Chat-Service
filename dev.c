@@ -201,6 +201,10 @@ void dev_init(int id, const char* usr, const char* pswd){
 }
 
 void update_devices(){
+    /*update other devices info; ask to server follwing info for each device registered:
+        username | port | status*/
+
+
     char buffer[BUFFER_SIZE];
     struct device* d;
 
@@ -230,6 +234,7 @@ void update_devices(){
     close(server.sd);
 }
 
+/*
 int find_device_from_socket(int sd){
     int i;
 
@@ -243,8 +248,10 @@ int find_device_from_socket(int sd){
 
     return -1;      //not found
 }
+*/
 
 int find_device(const char* usr){
+    //find device from username
     int i;
 
     printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
@@ -398,19 +405,24 @@ void handle_chat(int sock) {
 void handle_request(){
     printf("[handle_request]\n");
 
-    int s_sd, s_id, s_port;
-    char s_username[BUFFER_SIZE];
+    // int s_sd, s_id, s_port;
+    int s_sd, s_id;
+    // char s_username[BUFFER_SIZE];
+    struct device* d;
+
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
     //receive sender info
     s_id = recv_int2(s_sd, false);
-    s_port = recv_int2(s_sd, false);
-    recv_msg2(s_sd, s_username, false);
+    d = &devices[s_id];
+    // s_port = recv_int2(s_sd, false);
+    // recv_msg2(s_sd, s_username, false);
     // update_dev(s_id, s_username, s_port);
 
-    printf("[device] Received conncection request from '%s'\n", s_username);
+    // printf("[device] Received conncection request from '%s'\n", s_username);
+    printf("[device] Received conncection request from '%s'\n", d->username)    ;
     
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
@@ -462,7 +474,6 @@ void help_command(){
             "2) hanging      --> receive old messages\n"
             "3) show <user>  --> show pending messages from <user>\n"
             "4) chat <user>  --> open chat with <user>\n"
-            //todo: groupchat
             "5) share <user> --> share file with <user>??\n"
             "6) out          --> logout\n"
     );
@@ -667,10 +678,10 @@ void chat_command(){
         update_devices();
         r_sd = create_chat_socket(r_id, r_port);
 
-        //sending information
+        //sending id
         send_int(my_device.id, r_sd);
-        send_int(my_device.port, r_sd); 
-        send_msg(my_device.username, r_sd);
+        // send_int(my_device.port, r_sd); 
+        // send_msg(my_device.username, r_sd);
 
         printf("[device] Connected with '%s': you can now chat!\n", r_username);
 
