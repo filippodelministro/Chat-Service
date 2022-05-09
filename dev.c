@@ -405,10 +405,13 @@ void handle_chat(int sock) {
 void handle_request(){
     printf("[handle_request]\n");
 
+
+    //todo: fix this with new CHAT_COMMAND
     // int s_sd, s_id, s_port;
     int s_sd, s_id;
     // char s_username[BUFFER_SIZE];
     struct device* d;
+    update_devices();
 
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
@@ -417,6 +420,7 @@ void handle_request(){
     //receive sender info
     s_id = recv_int2(s_sd, false);
     d = &devices[s_id];
+    d->sd = s_sd;
     // s_port = recv_int2(s_sd, false);
     // recv_msg2(s_sd, s_username, false);
     // update_dev(s_id, s_username, s_port);
@@ -436,8 +440,8 @@ void handle_request(){
     }
     */
     
-    handle_chat(s_sd);
-    close(s_sd);
+    handle_chat(d->sd);
+    close(d->sd);
 }
 
 
@@ -639,6 +643,8 @@ void chat_command(){
     int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
+    //todo: change all the structure => use devices[r_id]
+
     //check to avoid self-chat
     if(strcmp(r_username, my_device.username) == 0){
         perror("[device] Error: chatting with yourself");
@@ -678,7 +684,7 @@ void chat_command(){
         update_devices();
         r_sd = create_chat_socket(r_id, r_port);
 
-        //sending id
+        //sending id 
         send_int(my_device.id, r_sd);
         // send_int(my_device.port, r_sd); 
         // send_msg(my_device.username, r_sd);
