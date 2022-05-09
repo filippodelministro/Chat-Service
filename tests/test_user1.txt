@@ -1,0 +1,3 @@
+signup 1 pippo ciao
+in 1 pippo ciao
+list
