@@ -402,7 +402,7 @@ void handle_chat(int sock) {
     
 }
 
-/*
+
 void handle_request(){
     printf("[handle_request]\n");
 
@@ -443,7 +443,7 @@ void handle_request(){
     handle_chat(d->sd);
     close(d->sd);
 }
-*/
+
 
 void handle_chat2(int sock){
     printf("[handle_chat2] INIZIO\n");
@@ -674,8 +674,11 @@ void show_command(){
     close(server.sd);
 }
 
-/*
+
 void chat_command(){
+    printf("CHAT SBAGLIATA, USARE CHAT2\n");
+    sleep(1);
+
     char r_username[BUFFER_SIZE];
     int r_port, r_id, r_sd;
     scanf("%s", r_username);
@@ -745,7 +748,7 @@ void chat_command(){
     printf("COMANDO CHAT ESEGUITO \n");
     close(server.sd);
 }
-*/
+
 
 void chat2_command(){
     char r_username[BUFFER_SIZE];
@@ -881,8 +884,8 @@ void read_command(){
 		hanging_command();
     else if (!strncmp(cmd, "show", 4) && my_device.connected)	
 		show_command();
-    // else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
-	// 	chat_command();
+    else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
+		chat_command();
     else if (!strncmp(cmd, "chat2", 5) && my_device.connected)	
 		chat2_command();
     else if (!strncmp(cmd, "groupchat", 9) && my_device.connected)	

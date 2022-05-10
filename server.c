@@ -418,6 +418,12 @@ void handle_request(){
     chat_end:
         prompt();
         break;
+    
+    case CHAT2_OPCODE:
+        printf("CHAT2 BRANCH!!\n");
+
+
+        break;
 
     case GROUPCHAT_CODE:
         printf("GROUPCHAT BRANCH!\n");
