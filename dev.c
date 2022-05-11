@@ -447,6 +447,70 @@ void handle_request(){
 
 void handle_culo(int sock){
     printf("[handle_culo] INIZIO\n");
+
+    int code, ret, i;
+    char msg[BUFFER_SIZE];          //message to send
+    char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
+    //// bool first_interaction = true;
+
+    FD_SET(sock, &master);
+    fdmax = sock;
+    system("clear");
+
+    while(true){
+        read_fds = master; 
+        if(!select(fdmax + 1, &read_fds, NULL, NULL, NULL)){
+			perror("[handle_chat] Error: select()\n");
+			exit(-1);
+        }
+        for (i = 0; i <= fdmax; i++) {
+			if(FD_ISSET(i, &read_fds)) {
+                if (i == 0) {
+                    //keyboard: sending message
+                    //fix: double user [time] at first send
+                    //todo: force to remain in same line
+                    // printf("[%s]: ", my_device.username);
+                    fgets(msg, BUFFER_SIZE, stdin);
+
+                    //sending until user type "\q"
+                    code = ((check_chat_command(msg)) ? ERR_CODE : OK_CODE);
+                    send_int(code, sock);
+                    if(code == ERR_CODE){
+                        FD_CLR(sock, &master);
+                        return;
+                    }
+
+                    append_time(buffer, msg);
+                    //send in any case message: if command, inform other device
+                    //todo: convert in send_msg (remove BUFFER_SIZE)
+                    send(sock, buffer, BUFFER_SIZE, 0);
+                }
+                else if(i == sock){
+                    // received message
+                    //todo: convert in recv_msg (remove BUFFER_SIZE)
+                    //receive messages until other user type '\q'
+                    if((recv_int2(sock, false)) == OK_CODE){
+                        if(recv(sock, (void*)buffer, BUFFER_SIZE, 0) == 0){
+                            printf("Other device quit!\n");
+                            FD_CLR(sock, &master);
+                            // close(sock);
+                            return;
+                        }
+                        printf("%s", buffer);
+                    }
+                    else{
+                        printf("[device] Other device quit...\n");
+                        sleep(1);
+                        printf("[device] Closing chat\n");
+                        FD_CLR(sock, &master);
+                        // close(sock);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    
 }
 
 void handle_request2(){
