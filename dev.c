@@ -445,8 +445,8 @@ void handle_request(){
 }
 
 
-void handle_chat2(int sock){
-    printf("[handle_chat2] INIZIO\n");
+void handle_culo(int sock){
+    printf("[handle_culo] INIZIO\n");
 }
 
 void handle_request2(){
@@ -477,7 +477,7 @@ void handle_request2(){
     ////     sleep(1);
     //// }
     
-    handle_chat2(d->sd);
+    handle_culo(d->sd);
     close(d->sd);
 }
 
@@ -749,8 +749,9 @@ void chat_command(){
     close(server.sd);
 }
 
+void culo_command(){
+    printf("CULO: CHAT2! INIZIO\n");
 
-void chat2_command(){
     char r_username[BUFFER_SIZE];
     int r_port, r_id, r_sd;
     struct device* d;
@@ -769,14 +770,17 @@ void chat2_command(){
     if(!d->connected){
         //if device is not online, cht is handled by server
         printf("[device] user '%s' is not online: chatting with server\n", d->username);
-        send_opcode(CHAT2_OPCODE);
+        create_srv_socket_tcp(server.port);
+        send_opcode(CULO_OPCODE);
         sleep(1);
 
+        //send chat info
         send_int(my_device.id, server.sd);
         //todo: authentication
         send_int(d->id, server.sd);
 
         handle_chat_w_server();
+        close(server.sd);
     }
     else{
         //if device is online start chat
@@ -787,7 +791,7 @@ void chat2_command(){
         //sending my_device info to receiver
         send_int(my_device.id, d->sd);
 
-        handle_chat2(d->sd);
+        handle_culo(d->sd);
         close(d->sd);
     }
 }
@@ -886,8 +890,8 @@ void read_command(){
 		show_command();
     else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
-    else if (!strncmp(cmd, "chat2", 5) && my_device.connected)	
-		chat2_command();
+    else if (!strncmp(cmd, "culo", 4) && my_device.connected)	
+		culo_command();
     else if (!strncmp(cmd, "groupchat", 9) && my_device.connected)	
 		groupchat_command();
 	else if (!strncmp(cmd, "share", 5) && my_device.connected)	
