@@ -433,6 +433,9 @@ void handle_request(){
             //todo: save messages in a file for receiver
             printf("%s", buffer);
         }
+        
+        memset(buffer, 0, sizeof(buffer));
+        close(new_dev);
         prompt();
         break;
 

@@ -432,12 +432,12 @@ void handle_request(){
     //todo: manage history of chat
 
     //fix: waiting
-    sleep(1);
+    // sleep(1);
     
-    for(int i=3; i>0; i--){
-        printf("[device] Chat starting in %d seconds...\r", i);
-        sleep(1);
-    }
+    // for(int i=3; i>0; i--){
+    //     printf("[device] Chat starting in %d seconds...\r", i);
+    //     sleep(1);
+    // }
     
     
     handle_chat(d->sd);
@@ -464,8 +464,8 @@ void handle_culo(int sock){
 			exit(-1);
         }
         for (i = 0; i <= fdmax; i++) {
-			if(FD_ISSET(i, &read_fds)) {
-                if (i == 0) {
+			if(FD_ISSET(i, &read_fds)){
+                if (!i) {
                     //keyboard: sending message
                     //fix: double user [time] at first send
                     //todo: force to remain in same line
@@ -486,7 +486,7 @@ void handle_culo(int sock){
                     send(sock, buffer, BUFFER_SIZE, 0);
                 }
                 else if(i == sock){
-                    // received message
+                    //received message
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
                     //receive messages until other user type '\q'
                     if((recv_int2(sock, false)) == OK_CODE){
@@ -525,15 +525,14 @@ void handle_request2(){
     struct device* d;
     update_devices();
 
-    s_id = recv_int2(s_sd, false);
     //receive sender info
+    s_id = recv_int2(s_sd, false);
     d = &devices[s_id];
     d->sd = s_sd;
 
     // printf("[device] Received conncection request from '%s'\n", s_username);
-    printf("[device] Received conncection request from '%s'\n", d->username)    ;
+    printf("[device] Received conncection request from '%s'\n", d->username);
     
-
     //fix: waiting
     //// sleep(1);   
     //// for(int i=3; i>0; i--){
@@ -740,7 +739,7 @@ void show_command(){
 
 
 void chat_command(){
-    printf("CHAT SBAGLIATA, USARE CHAT2\n");
+    printf("CHAT SBAGLIATA, USARE CULO\n");
     sleep(1);
 
     char r_username[BUFFER_SIZE];
@@ -821,6 +820,10 @@ void culo_command(){
     struct device* d;
 
     scanf("%s", r_username);
+    if(strcmp(r_username, my_device.username) == 0){
+        printf("[device] Error: chatting with yourself\n");
+	    return;
+    } 
 
     //get receiver info & check if registered
     update_devices();
