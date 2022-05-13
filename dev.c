@@ -406,49 +406,56 @@ void handle_chat(int sock) {
 void handle_request(){
     printf("[handle_request]\n");
 
-    //todo: fix this with new CHAT_COMMAND
-    // int s_sd, s_id, s_port;
-    int s_sd, s_id;
-    // char s_username[BUFFER_SIZE];
-
+    int s_sd, s_id, s_port;
+    char s_username[BUFFER_SIZE];
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
-    struct device* d;
-    update_devices();
     //receive sender info
     s_id = recv_int2(s_sd, false);
-    d = &devices[s_id];
-    d->sd = s_sd;
-    // s_port = recv_int2(s_sd, false);
-    // recv_msg2(s_sd, s_username, false);
+    s_port = recv_int2(s_sd, false);
+    recv_msg2(s_sd, s_username, false);
     // update_dev(s_id, s_username, s_port);
 
-    // printf("[device] Received conncection request from '%s'\n", s_username);
-    printf("[device] Received conncection request from '%s'\n", d->username)    ;
+    printf("[device] Received conncection request from '%s'\n", s_username);
     
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
 
     //fix: waiting
-    // sleep(1);
+    sleep(1);
+    /*
+    for(int i=3; i>0; i--){
+        printf("[device] Chat starting in %d seconds...\r", i);
+        sleep(1);
+    }
+    */
     
-    // for(int i=3; i>0; i--){
-    //     printf("[device] Chat starting in %d seconds...\r", i);
-    //     sleep(1);
-    // }
-    
-    
-    handle_chat(d->sd);
-    close(d->sd);
+    handle_chat(s_sd);
+    close(s_sd);
+    // return;
 }
 
+/*
+int check_culo_command(char* cmd){
 
+    if(!strncmp(cmd, "\\q", 2)){
+        printf("[read_chat_command] Quit chat!\n");
+        return QUIT_CODE;
+    }
+    else if(!strncmp(cmd, "\\a", 2)){
+        //add new device to chat
+        printf("[device] Type <user> to add to this chat.\n[device] <user> has to be online!\n");
+        return ADD_CODE;
+    }
+    else
+        return OK_CODE;
+}
 void handle_culo(int sock){
     printf("[handle_culo] INIZIO\n");
 
-    int code, ret, i;
+    int code, ret, i, r_id;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
     //// bool first_interaction = true;
@@ -468,43 +475,72 @@ void handle_culo(int sock){
                 if (!i) {
                     //keyboard: sending message
                     //fix: double user [time] at first send
-                    //todo: force to remain in same line
-                    // printf("[%s]: ", my_device.username);
                     fgets(msg, BUFFER_SIZE, stdin);
+                    code = check_culo_command(msg);
 
-                    //sending until user type "\q"
-                    code = ((check_chat_command(msg)) ? ERR_CODE : OK_CODE);
+                    //sending code to inform other device
                     send_int(code, sock);
-                    if(code == ERR_CODE){
+
+                    switch (code){
+                    case QUIT_CODE:
                         FD_CLR(sock, &master);
                         return;
-                    }
-
-                    append_time(buffer, msg);
-                    //send in any case message: if command, inform other device
-                    //todo: convert in send_msg (remove BUFFER_SIZE)
-                    send(sock, buffer, BUFFER_SIZE, 0);
+                        break;
+                    
+                    case ADD_CODE:
+                        r_id = find_device(msg);
+                        send_int(r_id, sock);
+                        break;
+                    
+                    case OK_CODE:
+                        append_time(buffer, msg);
+                        //send in any case message: if command, inform other device
+                        //todo: convert in send_msg (remove BUFFER_SIZE)
+                        send(sock, buffer, BUFFER_SIZE, 0);
+                        break;
+                    
+                    default:
+                        printf("[handle_culo] ERROR: code not valid!\n");
+                        return;
+                        break;
+                    }                   
                 }
                 else if(i == sock){
                     //received message
-                    //todo: convert in recv_msg (remove BUFFER_SIZE)
-                    //receive messages until other user type '\q'
-                    if((recv_int2(sock, false)) == OK_CODE){
-                        if(recv(sock, (void*)buffer, BUFFER_SIZE, 0) == 0){
-                            printf("Other device quit!\n");
-                            FD_CLR(sock, &master);
-                            // close(sock);
-                            return;
-                        }
-                        printf("%s", buffer);
-                    }
-                    else{
-                        printf("[device] Other device quit...\n");
+                    code = recv_int2(sock, true);
+
+                    switch (code){
+                    case QUIT_CODE:
+                        printf("[device] Other device quit!\n");
                         sleep(1);
                         printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
-                        // close(sock);
                         return;
+                        break;
+                
+                    case ADD_CODE:
+                        r_id = recv_int2(sock, true);
+
+                        //todo: add chet with r_id
+
+                        break;
+                
+                    case OK_CODE:
+                        //todo: convert in recv_msg (remove BUFFER_SIZE)
+                        if(!recv(sock, (void*)buffer, BUFFER_SIZE, 0)){
+                            printf("Other device quit!\n");
+                            FD_CLR(sock, &master);
+                            close(sock);
+                            return;
+                        }
+                        printf("%s", buffer);
+                        break;
+                
+                    default:
+                        printf("[handle_culo] ERROR: code not valid!\n");
+                        FD_CLR(sock, &master);
+                        return;
+                        break;
                     }
                 }
             }
@@ -512,6 +548,7 @@ void handle_culo(int sock){
     }
     
 }
+
 
 void handle_request2(){
     printf("[handle_request2]\n");
@@ -540,9 +577,13 @@ void handle_request2(){
     ////     sleep(1);
     //// }
     
-    handle_culo(d->sd);
-    close(d->sd);
+    // handle_culo(d->sd);
+    // close(d->sd);
+    handle_culo(s_sd);
+    close(s_sd);
+
 }
+*/
 
 //create a chat with devices passed in chat_devices [n_dev] 
 void create_chat(int n_dev, int* chat_devices){
@@ -739,18 +780,13 @@ void show_command(){
 
 
 void chat_command(){
-    printf("CHAT SBAGLIATA, USARE CULO\n");
-    sleep(1);
-
     char r_username[BUFFER_SIZE];
     int r_port, r_id, r_sd;
     scanf("%s", r_username);
 
-    //todo: change all the structure => use devices[r_id]
-
     //check to avoid self-chat
     if(strcmp(r_username, my_device.username) == 0){
-        printf("[device] Error: chatting with yourself\n");
+        perror("[device] Error: chatting with yourself");
 	    return;
     } 
 
@@ -787,20 +823,21 @@ void chat_command(){
         update_devices();
         r_sd = create_chat_socket(r_id, r_port);
 
-        //sending id 
+        //sending information
         send_int(my_device.id, r_sd);
-        // send_int(my_device.port, r_sd); 
-        // send_msg(my_device.username, r_sd);
+        send_int(my_device.port, r_sd); 
+        send_msg(my_device.username, r_sd);
 
         printf("[device] Connected with '%s': you can now chat!\n", r_username);
 
         //fix: waiting
         sleep(1);
-        
-        // for(int i=3; i>0; i--){
-        //     printf("[device] Chat starting in %d seconds...\r", i);
-        //     sleep(1);
-        // }
+        /*
+        for(int i=3; i>0; i--){
+            printf("[device] Chat starting in %d seconds...\r", i);
+            sleep(1);
+        }
+        */
         
         handle_chat(r_sd);
         close(r_sd);
@@ -811,7 +848,7 @@ void chat_command(){
     printf("COMANDO CHAT ESEGUITO \n");
     close(server.sd);
 }
-
+/*
 void culo_command(){
     printf("CULO: CHAT2! INIZIO\n");
 
@@ -858,10 +895,12 @@ void culo_command(){
         //sending my_device info to receiver
         send_int(my_device.id, d->sd);
 
+        sleep(1);
         handle_culo(d->sd);
         close(d->sd);
     }
 }
+*/
 
 void groupchat_command(){
     //first handshake
@@ -957,8 +996,10 @@ void read_command(){
 		show_command();
     else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
+    /*
     else if (!strncmp(cmd, "culo", 4) && my_device.connected)	
 		culo_command();
+    */
     else if (!strncmp(cmd, "groupchat", 9) && my_device.connected)	
 		groupchat_command();
 	else if (!strncmp(cmd, "share", 5) && my_device.connected)	
@@ -1025,20 +1066,19 @@ int main(int argc, char* argv[]){
 
                 else if(i == listening_socket){
                     //connection request
-                    // handle_request();
-                    handle_request2();
+                    handle_request();
+                    // handle_request2();
                 }
                 
-                /*
                 else if(i == server.sd){
                     //connection request by server
                     // i = recv_int(server.sd);
                     // printf("[device] TEST: received %d\n", i);
 
-                    // printf("\t\ti == server.sd\n");
+                    printf("\t\ti == server.sd\n");
 
                 }
-                */
+                
 
                 //clear buffer and prompt
                 memset(buffer, 0, BUFFER_SIZE);

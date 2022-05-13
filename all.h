@@ -32,6 +32,8 @@
 
 #define ERR_CODE            65535
 #define OK_CODE             65534
+#define QUIT_CODE           65533
+#define ADD_CODE            65532
 
 char* DELIMITER = "-";
 
@@ -61,14 +63,30 @@ int recv_int2(int sd, bool show){
     uint16_t num_;
     if(!recv(sd, (void*)&num_, sizeof(uint16_t), 0)){
         perror("Error recv: \n");
-        exit(-1);
+        return ERR_CODE;
     }
     
     num = ntohs(num_);
     if(show){
-        if(num == ERR_CODE){ printf("revc_int: received ERR_CODE!\n"); }
-        else if (num == OK_CODE) { printf("recv_int: received OK_CODE!\n"); }
-        else { printf("revc_int: received num %d\n", num); }
+        printf("revc_int: received ");
+        switch (num){
+        case ERR_CODE:
+            printf("ERR_CODE!\n");
+            break;
+        case OK_CODE:
+            printf("OK_CODE!\n");
+            break;
+        case QUIT_CODE:
+            printf("QUIT_CODE!\n");
+            break;
+        case ADD_CODE:
+            printf("ADD_CODE!\n");
+            break;
+
+        default:
+            printf("%d\n", num);
+            break;
+        }
     }
     
     return num;

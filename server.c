@@ -366,7 +366,6 @@ void handle_request(){
         break;
 
     case CHAT_OPCODE:
-
         int r_id, s_id;
         char r_username[WORD_SIZE];
         char s_username[WORD_SIZE];
