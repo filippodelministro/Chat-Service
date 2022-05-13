@@ -418,26 +418,6 @@ void handle_request(){
         prompt();
         break;
     
-    case CULO_OPCODE:
-        printf("CHAT2 BRANCH!!\n");
-
-        s_id = recv_int2(new_dev, false);
-        r_id = recv_int2(new_dev, false);
-
-        printf("'%s' is offline: getting messages from '%s'!\n", devices[r_id].username, devices[s_id].username);
-        while((recv_int2(new_dev, false)) == OK_CODE){
-            //todo: convert in send_msg (remove BUFFER_SIZE)
-            ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
-            //todo: make it invisible for server
-            //todo: save messages in a file for receiver
-            printf("%s", buffer);
-        }
-        
-        memset(buffer, 0, sizeof(buffer));
-        close(new_dev);
-        prompt();
-        break;
-
     case GROUPCHAT_CODE:
         printf("GROUPCHAT BRANCH!\n");
 
