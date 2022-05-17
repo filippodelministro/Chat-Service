@@ -69,6 +69,38 @@ void list_command(){
 }
 
 void esc_command(){
+    int i;
+
+    //? formatted file
+    // FILE* fp_f = fopen("f_network_status.txt", "w+");
+    FILE* fp = fopen("network_status.txt", "w+");
+    //todo: add timer
+    // fprintf(fp_f, "[server] %u devices registered, %d connected at *TIMER*>\n\n", n_dev, n_conn);
+    // fputs("+---------------------------------------------------+\n", fp_f);
+    // fputs("|ID\tUSERNAME\t\tPASSWORD\t\tTIMESTAMP\tPORT|\n", fp_f);
+    // fputs("+---------------------------------------------------+\n", fp_f);
+
+    for(i=0; i<n_dev; i++){
+        
+        struct device* d = &devices[i];
+        if(d->connected){
+            // fprintf(fp_f, "|%d\t%s\t\t\t%s\t\t\t%s\t%d\t|\n",
+            //     d->id, d->username,
+            //     d->password,
+            //     d->time,    
+            //     d->port
+            // );
+            fprintf(fp, "%d %s %s %s %d\n",
+                d->id, d->username,
+                d->password,
+                d->time,    
+                d->port
+            );
+        }
+    }
+
+    fclose(fp);
+
     printf("ESC COMMAND ESEGUITO\n");
 }
 
@@ -488,7 +520,7 @@ void handle_request(){
 int main(int argc, char** argv){
 
     if(argc != 2){
-		fprintf(stderr, "Error! Correct syntax: ./server <port>\n"); 
+		printf("Error! Correct syntax: ./server <port>\n"); 
 		exit(-1);
     }
     
@@ -499,7 +531,6 @@ int main(int argc, char** argv){
 	
     //Init set structure 
 	fdt_init();
-
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
 

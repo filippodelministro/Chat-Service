@@ -13,6 +13,7 @@ server: server.o
 # remove ojbect file reate durign compilation ('make reset' to execute)
 reset: 
 	rm *o dev server
+	rm *txt
 
 gdb:
 	gcc -g -Wall dev.c -o dev
