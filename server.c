@@ -101,7 +101,7 @@ void esc_command(){
 
     fclose(fp);
 
-    printf("ESC COMMAND ESEGUITO\n");
+    printf("[server] e\n");
 }
 
 
@@ -277,9 +277,7 @@ void fdt_init(){
     printf("[server] fdt_init: set init done!\n");
 }
 
-void create_tcp_socket(char* port){
-    int p = atoi(port);
-    my_port = p;
+void create_tcp_socket(int p){
 
     //crate socket
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -518,17 +516,20 @@ void handle_request(){
 //* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv){
+    int p;
 
     if(argc != 2){
-		printf("Error! Correct syntax: ./server <port>\n"); 
-		exit(-1);
+		printf("Note: Using default port [4242]\n");
+        p = 4242;
     }
+    else p = atoi(argv[1]);
+    
+    //create socket to get request
+	create_tcp_socket(p);
+    my_port = p;
     
     n_conn = n_dev = 0;
 
-    //create socket to get request
-	create_tcp_socket(argv[1]);
-	
     //Init set structure 
 	fdt_init();
 	FD_SET(listening_socket, &master);
