@@ -400,15 +400,21 @@ void handle_request(){
         char r_username[WORD_SIZE];
         char s_username[WORD_SIZE];
 
+        /*
+        //directory
+        //todo: change [25]
+        char dir_path[25];
+        char filename[25];
+        struct stat st = {0};      //? 
+        */
+
         //get sender & receiver info
         s_id = recv_int(new_dev);
-        recv_msg(new_dev, username);
-        r_id = find_device(username);
+        r_id = recv_int(new_dev);
 
         //check if receiver is registered
-        if(r_id == -1){
-            printf("[server] '%s' does not exist...\nsending ERR_CODE\n", username);    
-            send_int(ERR_CODE, new_dev);
+        if(r_id >= n_dev){
+            printf("[server] user '%d' does not exist...\nclosing CHAT\n");    
             goto chat_end;
         }
         else{
@@ -419,29 +425,50 @@ void handle_request(){
                 "\treceiver: %s\t[%d]\n",
                 s_username, s_id, r_username, r_id
             );
-            //sending receiver's port
-            send_int(OK_CODE, new_dev);
         }
 
         //manage chat in different situation
         if(devices[r_id].connected){
-            //request device is online: sending destination info (port and id)
-            send_int(devices[r_id].port, new_dev);
-            send_int(r_id, new_dev);
-
+            //request device is online: chat handled by other device
+            printf("[server] Error: device '%s' is online: should not handle this chat!\n", r_username);
+            return;
         }
         else{
             //request device is offline: server manage chat with new_dev  
-            send_int(my_port, new_dev);
-
             printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
+
+            /*
+            //*check if directory already exists before create;
+                //*create a directory for all the pending_messages
+                //*create a subdirectory for each receiver [offline]
+
+            //all pending_msgs
+            sprintf(dir_path, "./pending_messages");
+            if(stat(dir_path, &st) == -1)
+                mkdir(dir_path, 0700);
+
+            //subdirectory for receiver
+            sprintf(dir_path, "./pending_messages/device_%d", r_id);
+            if(stat(dir_path, &st) == -1)
+                mkdir(dir_path, 0700);
+
+            sprintf(filename, "%s/from_%d.txt", dir_path, s_id);
+            FILE* fp = fopen(filename, "a");
+            */
+
+            //device is now running handle_chat_w_server() function
             while((recv_int2(new_dev, false)) == OK_CODE){
                 //todo: convert in send_msg (remove BUFFER_SIZE)
                 ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
                 //todo: make it invisible for server
                 //todo: save messages in a file for receiver
                 printf("%s", buffer);
+                
+                //copy messages in a file
+                // fprintf(fp, buffer);
+
             }
+            // fclose(fp);
         }
 
     chat_end:
