@@ -70,26 +70,12 @@ void list_command(){
 
 void esc_command(){
     int i;
-
-    //? formatted file
-    // FILE* fp_f = fopen("f_network_status.txt", "w+");
     FILE* fp = fopen("network_status.txt", "w+");
-    //todo: add timer
-    // fprintf(fp_f, "[server] %u devices registered, %d connected at *TIMER*>\n\n", n_dev, n_conn);
-    // fputs("+---------------------------------------------------+\n", fp_f);
-    // fputs("|ID\tUSERNAME\t\tPASSWORD\t\tTIMESTAMP\tPORT|\n", fp_f);
-    // fputs("+---------------------------------------------------+\n", fp_f);
 
     for(i=0; i<n_dev; i++){
         
         struct device* d = &devices[i];
         if(d->connected){
-            // fprintf(fp_f, "|%d\t%s\t\t\t%s\t\t\t%s\t%d\t|\n",
-            //     d->id, d->username,
-            //     d->password,
-            //     d->time,    
-            //     d->port
-            // );
             fprintf(fp, "%d %s %s %s %d\n",
                 d->id, d->username,
                 d->password,
@@ -100,11 +86,32 @@ void esc_command(){
     }
 
     fclose(fp);
-
-    printf("[server] e\n");
 }
 
+//fix: da usare??
+void print_command(){
+    int i;
 
+    FILE* fp_f = fopen("f_network_status.txt", "w+");
+    //todo: add server timer
+    fprintf(fp_f, "[server] %u devices registered, %d connected at *TIMER*>\n\n", n_dev, n_conn);
+    fputs("+---------------------------------------------------+\n", fp_f);
+    fputs("|ID\tUSERNAME\t\tPASSWORD\t\tTIMESTAMP\tPORT|\n", fp_f);
+    fputs("+---------------------------------------------------+\n", fp_f);
+
+    for(i=0; i<n_dev; i++){
+        struct device* d = &devices[i];
+        if(d->connected){
+            fprintf(fp_f, "|%d\t%s\t\t\t%s\t\t\t%s\t%d\t|\n",
+                d->id, d->username,
+                d->password,
+                d->time,    
+                d->port
+            );
+        }
+    }
+    fclose(fp_f);
+}
 //maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
 //*                              UTILITY                                ///
@@ -179,12 +186,13 @@ int add_dev(const char* usr, const char* pswd){
     strcpy(d->username, usr);
     strcpy(d->password, pswd);
 
-    printf("[server] add_dev: added new device! \n"
+    printf("[server] add_dev: added new device!\n"
                     "\t dev_id: %d\n"
                     "\t username: %s\n"
                     "\t password: %s\n",
                     d->id, d->username, d->password
     );
+    printf("ADD_DEV: OK\n");
     return n_dev++;
 }
 
@@ -199,21 +207,6 @@ int find_device(const char* usr){
         if(!strcmp(d->username, usr))
             return i;    
     }
-
-    return -1;      //not found
-}
-
-int find_device_from_socket(int sd){
-    int i;
-
-    // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(d->sd == sd && d->connected)
-            return i;    
-    }
-
     return -1;      //not found
 }
 
@@ -227,7 +220,6 @@ int find_device_from_port(int port){
         if(d->port == port && d->connected)
             return i;    
     }
-
     return -1;      //not found
 }
 
@@ -358,6 +350,7 @@ void handle_request(){
         close(new_dev);
         prompt();
         break;
+
     case IN_OPCODE:                            
 
         //recevive username and password
@@ -400,13 +393,13 @@ void handle_request(){
         char r_username[WORD_SIZE];
         char s_username[WORD_SIZE];
 
-        /*
+        
         //directory
         //todo: change [25]
         char dir_path[25];
         char filename[25];
         struct stat st = {0};      //? 
-        */
+        
 
         //get sender & receiver info
         s_id = recv_int(new_dev);
@@ -437,7 +430,7 @@ void handle_request(){
             //request device is offline: server manage chat with new_dev  
             printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
 
-            /*
+            
             //*check if directory already exists before create;
                 //*create a directory for all the pending_messages
                 //*create a subdirectory for each receiver [offline]
@@ -453,8 +446,14 @@ void handle_request(){
                 mkdir(dir_path, 0700);
 
             sprintf(filename, "%s/from_%d.txt", dir_path, s_id);
-            FILE* fp = fopen(filename, "a");
-            */
+            printf("[server] Create file to save messages:\n\t%s\n", filename);
+
+            //fix: dont work like this
+            // FILE* fp;
+            // if((fp = fopen(filename, "a")) == NULL){
+            //     perror("[server] Error: fopen()");
+            //     exit(-1);
+            // }
 
             //device is now running handle_chat_w_server() function
             while((recv_int2(new_dev, false)) == OK_CODE){
@@ -465,13 +464,14 @@ void handle_request(){
                 printf("%s", buffer);
                 
                 //copy messages in a file
-                // fprintf(fp, buffer);
-
+                // fprintf(fp, buffer);     //fix
             }
-            // fclose(fp);
+            // fclose(fp);                  //fix
         }
 
     chat_end:
+        memset(buffer, 0, sizeof(buffer));
+        close(new_dev);
         prompt();
         break;
     
@@ -488,8 +488,10 @@ void handle_request(){
     case OUT_OPCODE:
         //get id from device
         id = recv_int(new_dev);
-        printf("id ricevuto: %d", id);
+        printf("id ricevuto: %d\n", id);
         d = &devices[id];
+
+        printf("[server] authentication for user %d\n", id);
 
         //get username & password for autentication
         recv_msg(new_dev, username);
