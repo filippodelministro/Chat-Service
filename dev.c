@@ -155,6 +155,7 @@ void create_listening_socket_tcp(){
     if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
 int create_chat_socket(int id, int port){
+    printf("[device] create_chat_socket: BEGIN\n");
 
     //create socket
     if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -177,6 +178,7 @@ int create_chat_socket(int id, int port){
         exit(-1);
     }
 
+    printf("[device] create_chat_socket: END\n");
     return devices[id].sd;
 }
 
@@ -203,6 +205,8 @@ void dev_init(int id, const char* usr, const char* pswd){
 void update_devices(){
     /*update other devices info; ask to server follwing info for each device registered:
         username | port | status*/
+
+    printf("[device] create_chat_socket: BEGIN\n");
 
     char buffer[BUFFER_SIZE];
     struct device* d;
@@ -231,6 +235,7 @@ void update_devices(){
         strcpy(d->username, buffer);
     }
     close(server.sd);
+    printf("[device] create_chat_socket: END\n");
 }
 
 /*
@@ -260,7 +265,6 @@ int find_device(const char* usr){
         if(!strcmp(d->username, usr))
             return i;    
     }
-
     return -1;      //not found
 }
 
@@ -364,7 +368,7 @@ void handle_chat(int sock) {
                     }
 
                     append_time(buffer, msg);
-                    //send in any case message: if command, inform other device
+                    //send in any case message: if command, inform other device=
                     //todo: convert in send_msg (remove BUFFER_SIZE)
                     send(sock, buffer, BUFFER_SIZE, 0);
                 }
@@ -394,6 +398,14 @@ void handle_chat(int sock) {
                         return;
                     }
                 }
+                //fix: controllare
+                else if(i == listening_socket){
+                    //?inutile??;
+                }
+                else if(i == server.sd){
+                    //todo: gestire caso della ESC del server;
+                    // server.connected = false;
+                }
             }
         }
     }
@@ -410,13 +422,12 @@ void handle_request(){
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
+    update_devices();
+
     //receive sender info
     s_id = recv_int2(s_sd, false);
-    s_port = recv_int2(s_sd, false);
-    recv_msg2(s_sd, s_username, false);
-    // update_dev(s_id, s_username, s_port);
 
-    printf("[device] Received conncection request from '%s'\n", s_username);
+    printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
@@ -579,7 +590,7 @@ void in_command(){
     my_device.connected = true;
     printf("[device] You are now online!\n");
 
-    memset(buffer, 0, sizeof(buffer));
+    memset(&buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
@@ -633,12 +644,12 @@ void show_command(){
 
 void chat_command(){
     char r_username[BUFFER_SIZE];
-    int r_port, r_id, r_sd;
+    int r_id, r_sd;
     scanf("%s", r_username);
 
     //check to avoid self-chat
     if(strcmp(r_username, my_device.username) == 0){
-        perror("[device] Error: chatting with yourself");
+        printf("[device] Error: chatting with yourself");
 	    return;
     } 
 
@@ -665,8 +676,12 @@ void chat_command(){
     }
     else{
         //receiver is online: chatting with him
-        r_sd = create_chat_socket(r_id, r_port);
-    
+        r_sd = create_chat_socket(r_id, devices[r_id].port);
+        devices[r_id].sd = r_sd;
+
+        //handshake with receiver
+        send_int(my_device.id, r_sd);
+
         handle_chat(r_sd);
         close(r_sd);
     }

@@ -232,7 +232,21 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         id, usr, pswd
     );
 
-    if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
+    /*
+    printf("AAAAAAAA: checking for device #%d\n"
+        "\td.username: %s\n"
+        "\td.pswd: %s\n", 
+        id, d->username, d->password
+    );
+
+    printf("BBBBBBB: checking for device #%d\n"
+        "\td.username: %s\n"
+        "\td.pswd: %s\n", 
+        id, usr, pswd
+    );
+    */
+
+    if(d &&!strcmp(d->username, usr) && !strcmp(d->password, pswd)){
    
         printf("check_and_connect: authentication success!\n");
         
@@ -253,6 +267,15 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         list_command();
         return id;
     }
+
+    /*
+    printf("1:%d\n2:%d\n",strcmp(d->username, usr), strcmp(d->password, pswd));
+    printf("CCCCCCC: checking for device #%d\n"
+        "\tusername: %s\n"
+        "\tpswd: %s\n", 
+        id, usr, pswd
+    );
+    */
 
     printf("[server] check_and_connect: authentication failed!\n");
     return ERR_CODE;
@@ -323,8 +346,6 @@ void handle_request(){
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
-    FILE* fp;
-
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     opcode = recv_int(new_dev);
@@ -348,7 +369,7 @@ void handle_request(){
         //send dev_id 
         send_int(ret, new_dev);
 
-        memset(buffer, 0, sizeof(buffer));
+        memset(&buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
@@ -373,7 +394,7 @@ void handle_request(){
         ret = check_and_connect(id, port, username, password);
         send_int(ret, new_dev);
 
-        memset(buffer, 0, sizeof(buffer));
+        memset(&buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
