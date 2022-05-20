@@ -14,8 +14,9 @@ Users can ask for a new chat to the server which manage all the online users, li
 
 **Note:** The following can be used only if user is connected
 
-* `hanging`: List all users who send message to the user while offline.
+* `list`: show all users to send messages
 
+* `hanging`: List all users who send message to the user while offline.
 
 * `show <username>`: Show messages sent by `username`.
 

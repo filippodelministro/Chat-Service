@@ -676,20 +676,6 @@ void chat_command(){
     close(server.sd);
 }
 
-
-void groupchat_command(){
-    //first handshake
-    create_srv_socket_tcp(server.port);
-    send_opcode(GROUPCHAT_CODE);
-    sleep(1);
-
-    int prova[3] = {0, 1, 2};
-
-    create_chat(3, prova);
-
-    printf("COMANDO GROUPCHAT ESEGUITO \n");
-}
-
 void share_command(){
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -771,8 +757,6 @@ void read_command(){
 		show_command();
     else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
-    else if (!strncmp(cmd, "groupchat", 9) && my_device.connected)	
-		groupchat_command();
 	else if (!strncmp(cmd, "share", 5) && my_device.connected)	
         share_command();
     else if (!strncmp(cmd, "out", 3) && my_device.connected)

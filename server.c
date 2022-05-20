@@ -112,7 +112,7 @@ void print_command(){
     }
     fclose(fp_f);
 }
-//maybe in an unic extern file utility.c            ???
+//fix: maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
 //*                              UTILITY                                ///
 //* ///////////////////////////////////////////////////////////////////////
@@ -323,6 +323,8 @@ void handle_request(){
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
+    FILE* fp;
+
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     opcode = recv_int(new_dev);
@@ -396,10 +398,9 @@ void handle_request(){
         
         //directory
         //todo: change [25]
-        char dir_path[25];
-        char filename[25];
-        struct stat st = {0};      //? 
-        
+        char dir_path[50];
+        char filename[50];
+        struct stat st = {0};      //?
 
         //get sender & receiver info
         s_id = recv_int(new_dev);
@@ -449,8 +450,14 @@ void handle_request(){
             printf("[server] Create file to save messages:\n\t%s\n", filename);
 
             //fix: dont work like this
+
+
             // FILE* fp;
-            // if((fp = fopen(filename, "a")) == NULL){
+            // if((fp = fopen(filename, "w")) == NULL){
+            //     perror("[server] Error: fopen()");
+            //     exit(-1);
+            // }
+            // if((fp = fopen("prova.txt", "w")) == NULL){
             //     perror("[server] Error: fopen()");
             //     exit(-1);
             // }
@@ -473,11 +480,6 @@ void handle_request(){
         memset(buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
-        break;
-    
-    case GROUPCHAT_CODE:
-        printf("GROUPCHAT BRANCH!\n");
-
         break;
 
     case SHARE_OPCODE:

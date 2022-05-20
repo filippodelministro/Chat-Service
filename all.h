@@ -24,9 +24,8 @@
 #define HANGING_OPCODE      2
 #define SHOW_OPCODE         3
 #define CHAT_OPCODE         4
-#define GROUPCHAT_CODE      5
-#define SHARE_OPCODE        6
-#define OUT_OPCODE          7
+#define SHARE_OPCODE        5
+#define OUT_OPCODE          6
 
 #define UPDATE_OPCODE       8
 
