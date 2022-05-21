@@ -717,8 +717,7 @@ void out_command(){
 }
 
 void read_command(){
-
-    //get commando from stdin
+    //get command from stdin
     char cmd[COMMAND_LENGHT];
     scanf("%s", cmd);
 
@@ -727,6 +726,10 @@ void read_command(){
         return;
     }
 
+    if(!server.connected){
+        printf("[device] server is offline: try later\n");
+        return;
+    }
     //signup and in allowed only if not connected
     //other command allowed only if connected
     if(!strncmp(cmd, "help", 4)){
@@ -792,10 +795,10 @@ int main(int argc, char* argv[]){
     }
 
     my_device.port = atoi(argv[1]);
+    server.connected = true;
 
    //Initialise set structure 
 	fdt_init();
-    
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
     
