@@ -101,7 +101,7 @@ void esc_command(){
     exit(0);
 }
 
-//fix: da usare??
+//? da usare??
 void print_command(){
     int i;
 
@@ -166,21 +166,31 @@ void read_command(){
 //*                               FUNCTIONS                             ///
 //* ///////////////////////////////////////////////////////////////////////
 
-//todo: LEVARE
-bool usr_exists(const char* usr){
-//check if usr account already exists    
+int find_device(const char* usr){
+//look for device from username
     int i;
+
+    printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
         
         if(!strcmp(d->username, usr))
-            return true;    
+            return i;    
     }
-
-    return false;
+    return -1;      //not found
 }
+int find_device_from_port(int port){
+    int i;
 
-int find_device(const char*);
+    printf("[server] find_device_from_port: looking for port '%d'...\n", port);
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(d->port == port && d->connected)
+            return i;    
+    }
+    return -1;      //not found
+}
 int add_dev(const char* usr, const char* pswd){
 //add deviceto devices list: return dev_id or -1 if not possible to add
     
@@ -210,33 +220,6 @@ int add_dev(const char* usr, const char* pswd){
     return n_dev++;
 }
 
-//look for device from username
-int find_device(const char* usr){
-    int i;
-
-    printf("[server] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(!strcmp(d->username, usr))
-            return i;    
-    }
-    return -1;      //not found
-}
-
-int find_device_from_port(int port){
-    int i;
-
-    printf("[server] find_device_from_port: looking for port '%d'...\n", port);
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(d->port == port && d->connected)
-            return i;    
-    }
-    return -1;      //not found
-}
-
 //check if device is registred then connect device to network
 int check_and_connect(int id, int po, const char* usr, const char* pswd){
     struct device* d = &devices[id];
@@ -250,20 +233,6 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         printf("[server] check_and_connect: device doesnt exists!\n");
         return ERR_CODE;
     }
-
-    /*
-    printf("AAAAAAAA: checking for device #%d\n"
-        "\td.username: %s\n"
-        "\td.pswd: %s\n", 
-        id, d->username, d->password
-    );
-
-    printf("BBBBBBB: checking for device #%d\n"
-        "\td.username: %s\n"
-        "\td.pswd: %s\n", 
-        id, usr, pswd
-    );
-    */
 
     if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
         //if here device is found
@@ -284,15 +253,6 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         list_command();
         return id;
     }
-
-    /*
-    printf("1:%d\n2:%d\n",strcmp(d->username, usr), strcmp(d->password, pswd));
-    printf("CCCCCCC: checking for device #%d\n"
-        "\tusername: %s\n"
-        "\tpswd: %s\n", 
-        id, usr, pswd
-    );
-    */
 
     //if here authentication failed: prompt the reason
     printf("[server] check_and_connect: authentication failed:\n");
@@ -334,7 +294,6 @@ int create_chat_socket(int id){
         printf("connect() error");
         exit(-1);
     }
-
     return devices[id].sd;
 }
 
@@ -362,6 +321,25 @@ void create_listening_socket_tcp(){
     
     FD_SET(listening_socket, &master);
     if(listening_socket > fdmax){ fdmax = listening_socket; }
+}
+
+void restore_network(FILE* fp){
+    printf("[restore_network] network is not empty: restore from 'network_status.txt'\n");
+    //get numer of devices
+    fscanf(fp, "%d\n", &n_dev);
+    //!remove
+    printf("\tn_dev: %d\n", n_dev);
+
+    //get devices info
+    char buff[4096];
+    for(int i=0; i<n_dev; i++){
+        fgets(buff, sizeof(buff), fp);
+        //!remove
+        printf("%s", buff);
+    }
+    
+    printf("\n[restore_network] got devices info\n");
+    //todo: chiedere chi è online
 }
 //* //////////////////////////////////////////////////////////////////////
 
@@ -621,36 +599,14 @@ int main(int argc, char** argv){
     my_port = p;
     create_listening_socket_tcp();
 
-    FILE *fp;
-    if((fp = fopen("network_status.txt", "r"))){
+    FILE *file;
+    if((file = fopen("network_status.txt", "r"))){
         //if file exists restore old status
-
-        printf("[server] network is not empty: restore from 'network_status.txt'\n");
-        fscanf(fp, "%d", &n_dev);         //questo non fa casino e stampa corretto
-        printf("\tn_dev: %d\n", n_dev);     
-
-        //fix: get also other info
-        /*
-        for(int i=0; i<n_dev; i++){
-            int id, port;
-            char* usr, pswd, time;
-            fscanf(fp, "%d %s %s %s %d", &id, &usr, &pswd, &time, &port);
-            printf("[restore] device %d:\n"
-                "\t id: %d \n"
-                "\t usr: %s \n"
-                "\t pswd: %s\n"
-                "\t time: %s \n"
-                "\t port: %d\n",
-                id, usr, pswd, time, port
-            );
-        }
-        */
-        //todo: chiedere chi è online
-        fclose(fp);
+        restore_network(file);
+        fclose(file);
     }
     else{
         //first boot from server
-
         printf("[server] first boot: network is empty\n");
         n_conn = n_dev = 0;
     }
