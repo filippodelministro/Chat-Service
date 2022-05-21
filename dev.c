@@ -99,6 +99,7 @@ void create_srv_socket_tcp(int p){
 
     if(connect(server.sd, (struct sockaddr*)&server.addr, sizeof(server.addr)) == -1){
         perror("[device]: error connect(): ");
+        printf("<server_port> could be wrong; otherwise server is offline: try later\n");
         exit(-1);
     }
 
@@ -129,7 +130,7 @@ void create_listening_socket_tcp(){
     FD_SET(listening_socket, &master);
     if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
-int create_chat_socket(int id, int port){
+int create_chat_socket(int id){
     printf("[device] create_chat_socket: BEGIN\n");
 
     //create socket
@@ -144,13 +145,12 @@ int create_chat_socket(int id, int port){
     //create address
     memset((void*)&devices[id].addr, 0, sizeof(devices[id].addr));
     devices[id].addr.sin_family = AF_INET;
-    devices[id].addr.sin_port = htons(port);
+    devices[id].addr.sin_port = htons(devices[id].port);
     inet_pton(AF_INET, "127.0.0.1", &devices[id].addr.sin_addr);
 
     //connection
     if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
         printf("connect() error");
-        printf("<server_port> could be wrong; otherwise server is offline: try later\n");
         exit(-1);
     }
 
@@ -181,7 +181,7 @@ void update_devices(){
     /*update other devices info; ask to server follwing info for each device registered:
         username | port | status*/
 
-    printf("[device] create_chat_socket: BEGIN\n");
+    printf("[device] update_devices: BEGIN\n");
 
     char buffer[BUFFER_SIZE];
     struct device* d;
@@ -210,7 +210,7 @@ void update_devices(){
         strcpy(d->username, buffer);
     }
     close(server.sd);
-    printf("[device] create_chat_socket: END\n");
+    printf("[device] update_devices: END\n");
 }
 
 /*
@@ -397,11 +397,27 @@ void handle_request(){
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
+    //receive sender info: can be server [ERR_CODE] or a device [ID]
+    s_id = recv_int2(s_sd, true);
+
+    if(s_id == ERR_CODE){
+        //sender is server
+        printf("[handle_request] request by server\n");
+        int cmd = recv_int2(s_sd, true);
+        switch (cmd){
+        case ESC_OPCODE:
+            printf("[device] server is now offline\n");
+            server.connected = false;
+            break;
+        
+        default:
+            printf("[device] Error in server command!\n");
+            break;
+        }
+        return;
+    }
+
     update_devices();
-
-    //receive sender info
-    s_id = recv_int2(s_sd, false);
-
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     
     //todo: add check Y/N to connect (handle d->connected)
@@ -650,7 +666,7 @@ void chat_command(){
     }
     else{
         //receiver is online: chatting with him
-        r_sd = create_chat_socket(r_id, devices[r_id].port);
+        r_sd = create_chat_socket(r_id);
         devices[r_id].sd = r_sd;
 
         //handshake with receiver
@@ -816,7 +832,9 @@ int main(int argc, char* argv[]){
                     // printf("[device] TEST: received %d\n", i);
 
                     printf("\t\ti == server.sd\n");
-
+                    int opcode = recv_int2(server.sd, true);
+                    if(opcode == OUT_OPCODE)
+                        printf("[device] SERVER E' OFFLINE\n");
                 }
                 
 

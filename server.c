@@ -68,10 +68,11 @@ void list_command(){
     }
 }
 
+int create_chat_socket(int);
 void esc_command(){
     //save network status before switching server off
 
-    int i;
+    int i, sd;
     FILE* fp = fopen("network_status.txt", "w+");
 
     for(i=0; i<n_dev; i++){
@@ -89,12 +90,13 @@ void esc_command(){
 
     fclose(fp);
 
-    //todo: inform all devices
-    for(int i=0; i<n_dev; i++){
+    //inform all devices server is logging off
+    for(i=0; i<n_dev; i++){
         struct device* d = &devices[i];
         if(d->connected){
-            //crea socket
-            //manda messaggio
+            sd = create_chat_socket(i);
+            send_int(ERR_CODE, sd);
+            send_int(ESC_OPCODE, sd);
         }
     }
     //todo: exit(0);
@@ -311,34 +313,31 @@ void fdt_init(){
     printf("[server] fdt_init: set init done!\n");
 }
 
-/*
-void create_tcp_socket(int p){
+int create_chat_socket(int id){
 
-    //crate socket
-    if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
-        perror("[server] error socket()\n");
+    //create socket
+    if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("socket() error");
+        printf("closing program...\n"); 
         exit(-1);
     }
-    if(setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    if(setsockopt(devices[id].sd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
         perror("setsockopt(SO_REUSEADDR) failed");
 
     //create address
-    memset(&my_addr, 0, sizeof(my_addr));
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_port = htons(p);
-    my_addr.sin_addr.s_addr = INADDR_ANY;
+    memset((void*)&devices[id].addr, 0, sizeof(devices[id].addr));
+    devices[id].addr.sin_family = AF_INET;
+    devices[id].addr.sin_port = htons(devices[id].port);
+    inet_pton(AF_INET, "127.0.0.1", &devices[id].addr.sin_addr);
 
-    //linking address
-    if(bind(listening_socket, (struct sockaddr*)&my_addr, sizeof(my_addr)) == -1){
-        perror("[server] Error bind: \n");
+    //connection
+    if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
+        printf("connect() error");
         exit(-1);
     }
 
-    listen(listening_socket, MAX_DEVICES);
-
-    printf("[server] create_tcp_socket: waiting for connection...\n");
+    return devices[id].sd;
 }
-*/
 
 void create_listening_socket_tcp(){
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){

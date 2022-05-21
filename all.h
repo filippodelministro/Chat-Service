@@ -28,6 +28,7 @@
 #define OUT_OPCODE          6
 
 #define UPDATE_OPCODE       8
+#define ESC_OPCODE          9
 
 #define ERR_CODE            65535
 #define OK_CODE             65534
