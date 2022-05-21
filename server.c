@@ -22,7 +22,7 @@ struct device{
     char* password;
 }devices[MAX_DEVICES];          //devices array
 
-int n_dev;                 //number of devices registred
+int n_dev;                  //number of devices registred
 int n_conn;                 //number of devices connected
 
 //-----------     SET    -----------------
@@ -69,6 +69,8 @@ void list_command(){
 }
 
 void esc_command(){
+    //save network status before switching server off
+
     int i;
     FILE* fp = fopen("network_status.txt", "w+");
 
@@ -86,6 +88,9 @@ void esc_command(){
     }
 
     fclose(fp);
+
+    //todo: inform all devices
+    //todo: exit(0);
 }
 
 //fix: da usare??
@@ -118,6 +123,7 @@ void print_command(){
 //* ///////////////////////////////////////////////////////////////////////
 
 void boot_message(){
+    //todo: add timer and port info
     printf("**********************SERVER STARTED**********************\n");
     help_command();
 }
@@ -126,8 +132,6 @@ void boot_message(){
 void read_command(){
     
     char cmd[COMMAND_LENGHT];
-
-    get_cmd:
     scanf("%s", cmd);
 
     if(!strncmp(cmd, "clear", 5) || !strncmp(cmd, "cls", 3)){
@@ -143,15 +147,13 @@ void read_command(){
     else if(!strncmp(cmd, "esc", 3))
         esc_command();
     else{
-        printf("[server] Not valid command\n");
+        printf("[server] command is not valid!\n");
         help_command();
-        prompt();
-        goto get_cmd;
     }
     prompt();
 }
 
-//Function called by the server so manage socket and interaction with devices
+//Function called by the server to manage socket and interaction with devices
 //* ///////////////////////////////////////////////////////////////////////
 //*                               FUNCTIONS                             ///
 //* ///////////////////////////////////////////////////////////////////////
@@ -173,10 +175,12 @@ bool usr_exists(const char* usr){
 int add_dev(const char* usr, const char* pswd){
     
     if(n_dev >= MAX_DEVICES)
-        return ERR_CODE;
+        return ERR_CODE;               
 
-    if(usr_exists(usr))
-        return ERR_CODE;
+    if(find_device(usr) != -1)
+        return ERR_CODE;                //device 'usr' already exists
+    // if(usr_exists(usr))
+    //     return ERR_CODE;
 
     struct device* d = &devices[n_dev];
 
@@ -232,6 +236,11 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         id, usr, pswd
     );
 
+    if(find_device(usr) == -1){
+        printf("[server] check_and_connect: device doesnt exists!\n");
+        return ERR_CODE;
+    }
+
     /*
     printf("AAAAAAAA: checking for device #%d\n"
         "\td.username: %s\n"
@@ -246,12 +255,13 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     );
     */
 
-    if(d &&!strcmp(d->username, usr) && !strcmp(d->password, pswd)){
-   
+    if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
+        //if here device is found
         printf("check_and_connect: authentication success!\n");
         
-        //if here device is found
         d->port = po;
+        d->connected = true;
+        n_conn++;
 
         //handle timestamp
         time_t rawtime;
@@ -259,9 +269,6 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         time(&rawtime);
         tv = localtime(&rawtime);
         strftime(d->time, 9, "%X", tv);
-
-        d->connected = true;
-        n_conn++;
 
         //show network info
         list_command();
@@ -277,7 +284,10 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     );
     */
 
-    printf("[server] check_and_connect: authentication failed!\n");
+    //if here authentication failed: prompt the reason
+    printf("[server] check_and_connect: authentication failed:\n");
+    if(strcmp(d->username, usr))printf("\terror on username: %s\n", usr);
+    if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
     return ERR_CODE;
 }
 
@@ -571,15 +581,17 @@ int main(int argc, char** argv){
     int p;
 
     if(argc != 2){
-		printf("Note: Using default port [4242]\n");
+		printf("[server] using default port [4242]\n");
         p = 4242;
     }
     else p = atoi(argv[1]);
     
     //create socket to get request
+    //fix: use create_listening_socket 
 	create_tcp_socket(p);
     my_port = p;
     
+    //todo: restore status from network_status.txt
     n_conn = n_dev = 0;
 
     //Init set structure 

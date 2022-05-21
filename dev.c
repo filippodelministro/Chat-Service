@@ -60,31 +60,6 @@ void boot_message(){
 //*                             FUNCTIONS                               ///
 //* ///////////////////////////////////////////////////////////////////////
 
-/*
-// void list_contacts(){
-//     int i;
-//     int n_conn = 0;
-
-//     for(i=0; i<MAX_DEVICES; i++){
-//         if(devices[i].connected)
-//             n_conn++;            
-//     }
-
-//     printf("\n[list_device] %u devices online\n", n_conn);
-//     printf("\tdev_id\tusername\tport\tsocket\n");
-//         for(i=0; i<MAX_DEVICES; i++){
-
-//             struct device* d = &devices[i];
-//             if(d->connected){
-//                 printf("\t%d\t%s\t\t%d\t%d\n",
-//                     d->id, d->username, 
-//                     d->port,
-//                     d->sd
-//                 );
-//             }
-//         }
-// }
-*/
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
@@ -174,7 +149,8 @@ int create_chat_socket(int id, int port){
 
     //connection
     if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
-        perror("connect() error");
+        printf("connect() error");
+        printf("<server_port> could be wrong; otherwise server is offline: try later\n");
         exit(-1);
     }
 
@@ -184,8 +160,7 @@ int create_chat_socket(int id, int port){
 
 //*manage devices
 void dev_init(int id, const char* usr, const char* pswd){
-//initialize my_device structure with usr/pswd get by user & dev_id get server
-    
+    //initialize my_device structure with usr/pswd get by user & dev_id get server
     struct device* d = &my_device;
 
     d->id = id;
@@ -622,8 +597,7 @@ void hanging_command(){
     send_opcode(HANGING_OPCODE);
     sleep(1);
 
-
-    printf("COMANDO SHOW ESEGUITO \n");
+    printf("COMANDO HANGING ESEGUITO \n");
     prompt();
     close(server.sd);
 }
@@ -726,15 +700,12 @@ void out_command(){
     close(server.sd);
 }
 
-//command for routine services
 void read_command(){
 
-    char cmd[COMMAND_LENGHT];
-
     //get commando from stdin
+    char cmd[COMMAND_LENGHT];
     scanf("%s", cmd);
 
-    
     if(!strncmp(cmd, "clear", 5) || !strncmp(cmd, "cls", 3)){
         system("clear");
         return;
@@ -777,9 +748,9 @@ void read_command(){
     else if (!strncmp(cmd, "out", 3) && my_device.connected)
         out_command();
 
-    //command is not valid; ask to help_command and show available command
+    //command is not valid: show available command
 	else{
-        printf("Command is not valid!\n");
+        printf("[device] command is not valid!\n");
             if(my_device.connected) help_command();
             else boot_message();
     }						
