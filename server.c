@@ -73,33 +73,32 @@ void esc_command(){
     //save network status before switching server off
 
     int i, sd;
-    FILE* fp = fopen("network_status.txt", "w+");
+    FILE* fp = fopen("network_status.txt", "w");
+    fprintf(fp, "%d\n", n_dev);
 
     for(i=0; i<n_dev; i++){
         
         struct device* d = &devices[i];
         if(d->connected){
+            //copy network status in a file
             fprintf(fp, "%d %s %s %s %d\n",
                 d->id, d->username,
                 d->password,
                 d->time,    
                 d->port
             );
-        }
-    }
 
-    fclose(fp);
-
-    //inform all devices server is logging off
-    for(i=0; i<n_dev; i++){
-        struct device* d = &devices[i];
-        if(d->connected){
+            //sending ESC_OPCODE to online devices 
             sd = create_chat_socket(i);
             send_int(ERR_CODE, sd);
             send_int(ESC_OPCODE, sd);
         }
     }
-    //todo: exit(0);
+
+    fclose(fp);
+    printf("[server] created 'network_status.txt'\n");
+    printf("[server] send ESC_OPCODE to other devices\n[server] closing...\n");
+    exit(0);
 }
 
 //fix: da usare??
@@ -516,8 +515,6 @@ void handle_request(){
             printf("[server] Create file to save messages:\n\t%s\n", filename);
 
             //fix: dont work like this
-
-
             // FILE* fp;
             // if((fp = fopen(filename, "w")) == NULL){
             //     perror("[server] Error: fopen()");
@@ -624,8 +621,39 @@ int main(int argc, char** argv){
     my_port = p;
     create_listening_socket_tcp();
 
-    //todo: restore status from network_status.txt
-    n_conn = n_dev = 0;
+    FILE *fp;
+    if((fp = fopen("network_status.txt", "r"))){
+        //if file exists restore old status
+
+        printf("[server] network is not empty: restore from 'network_status.txt'\n");
+        fscanf(fp, "%d", &n_dev);         //questo non fa casino e stampa corretto
+        printf("\tn_dev: %d\n", n_dev);     
+
+        //fix: get also other info
+        /*
+        for(int i=0; i<n_dev; i++){
+            int id, port;
+            char* usr, pswd, time;
+            fscanf(fp, "%d %s %s %s %d", &id, &usr, &pswd, &time, &port);
+            printf("[restore] device %d:\n"
+                "\t id: %d \n"
+                "\t usr: %s \n"
+                "\t pswd: %s\n"
+                "\t time: %s \n"
+                "\t port: %d\n",
+                id, usr, pswd, time, port
+            );
+        }
+        */
+        //todo: chiedere chi è online
+        fclose(fp);
+    }
+    else{
+        //first boot from server
+
+        printf("[server] first boot: network is empty\n");
+        n_conn = n_dev = 0;
+    }
 
     //Init set structure 
 	fdt_init();

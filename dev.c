@@ -128,7 +128,7 @@ void create_listening_socket_tcp(){
     listen(listening_socket, MAX_DEVICES);
     
     FD_SET(listening_socket, &master);
-    if(listening_socket > fdmax){ fdmax = listening_socket; }
+    if(listening_socket > fdmax){fdmax = listening_socket;}
 }
 int create_chat_socket(int id){
     printf("[device] create_chat_socket: BEGIN\n");
