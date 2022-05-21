@@ -90,6 +90,13 @@ void esc_command(){
     fclose(fp);
 
     //todo: inform all devices
+    for(int i=0; i<n_dev; i++){
+        struct device* d = &devices[i];
+        if(d->connected){
+            //crea socket
+            //manda messaggio
+        }
+    }
     //todo: exit(0);
 }
 
@@ -158,8 +165,9 @@ void read_command(){
 //*                               FUNCTIONS                             ///
 //* ///////////////////////////////////////////////////////////////////////
 
-//check if usr account already exists    
+//todo: LEVARE
 bool usr_exists(const char* usr){
+//check if usr account already exists    
     int i;
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
@@ -171,8 +179,9 @@ bool usr_exists(const char* usr){
     return false;
 }
 
-//add deviceto devices list: return dev_id or -1 if not possible to add
+int find_device(const char*);
 int add_dev(const char* usr, const char* pswd){
+//add deviceto devices list: return dev_id or -1 if not possible to add
     
     if(n_dev >= MAX_DEVICES)
         return ERR_CODE;               
@@ -302,6 +311,7 @@ void fdt_init(){
     printf("[server] fdt_init: set init done!\n");
 }
 
+/*
 void create_tcp_socket(int p){
 
     //crate socket
@@ -328,7 +338,33 @@ void create_tcp_socket(int p){
 
     printf("[server] create_tcp_socket: waiting for connection...\n");
 }
+*/
 
+void create_listening_socket_tcp(){
+    if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("[device] socket() error");
+        exit(-1);
+    }
+    if (setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
+
+    //address
+    memset(&my_addr, 0, sizeof(my_addr));
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_port = htons(my_port);
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    // inet_pton(AF_INET, "127.0.0.1", &server.addr.sin_addr);
+
+    if(bind(listening_socket, (struct sockaddr*)&my_addr, sizeof(my_addr)) == -1){
+        perror("[server] Error bind: \n");
+        exit(-1);
+    }
+
+    listen(listening_socket, MAX_DEVICES);
+    
+    FD_SET(listening_socket, &master);
+    if(listening_socket > fdmax){ fdmax = listening_socket; }
+}
 //* //////////////////////////////////////////////////////////////////////
 
 //prende opcode dal device (recv), poi lo fa gestire da un 
@@ -586,11 +622,9 @@ int main(int argc, char** argv){
     }
     else p = atoi(argv[1]);
     
-    //create socket to get request
-    //fix: use create_listening_socket 
-	create_tcp_socket(p);
     my_port = p;
-    
+    create_listening_socket_tcp();
+
     //todo: restore status from network_status.txt
     n_conn = n_dev = 0;
 
