@@ -53,17 +53,17 @@ void list_command(){
         printf("\tThere are no devices connected!\n");
     }
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\n");
+    printf("\tdev_id\tusername\ttimestamp\tport\tonline\n");
         for(i=0; i<n_dev; i++){
             
             struct device* d = &devices[i];
-            if(d->connected){
-                printf("\t%d\t%s\t\t%s\t%d\n",
+                printf("\t%d\t%s\t\t%s\t%d\t",
                     d->id, d->username, 
                     d->time,    
                     d->port
                 );
-            }
+            if(d->connected)printf("[x]\n");
+            else printf("[ ]\n");
         }
     }
 }
@@ -79,15 +79,15 @@ void esc_command(){
     for(i=0; i<n_dev; i++){
         
         struct device* d = &devices[i];
-        if(d->connected){
-            //copy network status in a file
-            fprintf(fp, "%d %s %s %s %d\n",
-                d->id, d->username,
-                d->password,
-                d->time,    
-                d->port
-            );
+        //copy network status in a file
+        fprintf(fp, "%d %s %s %s %d\n",
+            d->id, d->username,
+            d->password,
+            d->time,    
+            d->port
+        );
 
+        if(d->connected){
             //sending ESC_OPCODE to online devices 
             sd = create_chat_socket(i);
             send_int(ERR_CODE, sd);
@@ -292,7 +292,8 @@ int create_chat_socket(int id){
     //connection
     if(connect(devices[id].sd, (struct sockaddr*)&devices[id].addr, sizeof(devices[id].addr)) == -1) {
         printf("connect() error");
-        exit(-1);
+        return -1;
+        // exit(-1);
     }
     return devices[id].sd;
 }
@@ -325,21 +326,49 @@ void create_listening_socket_tcp(){
 
 void restore_network(FILE* fp){
     printf("[restore_network] network is not empty: restore from 'network_status.txt'\n");
+    
     //get numer of devices
     fscanf(fp, "%d\n", &n_dev);
-    //!remove
-    printf("\tn_dev: %d\n", n_dev);
+    n_conn = 0;
 
-    //get devices info
+    //get devices info in following format: |#id usr pswd HH:MM:SS #port|
     char buff[4096];
     for(int i=0; i<n_dev; i++){
+        struct device* d = &devices[i];
         fgets(buff, sizeof(buff), fp);
-        //!remove
-        printf("%s", buff);
+
+        //use strtok() to get buffer values 
+        char* b = strtok(buff, " ");
+        d->id = atoi(b);
+        
+        b = strtok(NULL, " ");
+        d->username = malloc(sizeof(b));
+        strcpy(d->username, b);
+
+        b = strtok(NULL, " ");
+        d->password = malloc(sizeof(b));
+        strcpy(d->password, b);
+
+        b = strtok(NULL, " ");
+        strcpy(d->time, b);
+
+        b = strtok(NULL, " ");
+        d->port = atoi(b);
+
+        //inform devices that server is online
+        int sd = create_chat_socket(i);
+        if(sd != -1){
+            //if connection doesnt fail, device is online
+            send_int(ERR_CODE, sd);
+            send_int(IN_OPCODE, sd);
+            d->connected = true;
+            n_conn++;
+        }
+        else
+            d->connected = false;
     }
     
     printf("\n[restore_network] got devices info\n");
-    //todo: chiedere chi è online
 }
 //* //////////////////////////////////////////////////////////////////////
 

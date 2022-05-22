@@ -396,6 +396,8 @@ void handle_request(){
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
+    
+    printf("[handle_request] accepted\n");
 
     //receive sender info: can be server [ERR_CODE] or a device [ID]
     s_id = recv_int2(s_sd, true);
@@ -406,8 +408,13 @@ void handle_request(){
         int cmd = recv_int2(s_sd, true);
         switch (cmd){
         case ESC_OPCODE:
-            printf("[device] server is now offline\n");
+            printf("[device] server is now offline!\n");
             server.connected = false;
+            break;
+
+        case IN_OPCODE:
+            printf("[device] server is online!\n");
+            server.connected = true;
             break;
         
         default:
