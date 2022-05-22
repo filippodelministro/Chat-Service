@@ -219,9 +219,8 @@ int add_dev(const char* usr, const char* pswd){
     printf("ADD_DEV: OK\n");
     return n_dev++;
 }
-
-//check if device is registred then connect device to network
 int check_and_connect(int id, int po, const char* usr, const char* pswd){
+//check if device is registred then connect device to network
     struct device* d = &devices[id];
     printf("check_and_connect: checking for device #%d\n"
         "\tusr: %s\n"
@@ -261,17 +260,6 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     return ERR_CODE;
 }
 
-void fdt_init(){
-    FD_ZERO(&master);
-	FD_ZERO(&read_fds);
-    // FD_ZERO(&write_fds);
-	FD_SET(0, &master);
-	
-	fdmax = 0;
-
-    printf("[server] fdt_init: set init done!\n");
-}
-
 int create_chat_socket(int id){
 
     //create socket
@@ -297,7 +285,6 @@ int create_chat_socket(int id){
     }
     return devices[id].sd;
 }
-
 void create_listening_socket_tcp(){
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("[device] socket() error");
@@ -324,6 +311,16 @@ void create_listening_socket_tcp(){
     if(listening_socket > fdmax){ fdmax = listening_socket; }
 }
 
+void fdt_init(){
+    FD_ZERO(&master);
+	FD_ZERO(&read_fds);
+    // FD_ZERO(&write_fds);
+	FD_SET(0, &master);
+	
+	fdmax = 0;
+
+    printf("[server] fdt_init: set init done!\n");
+}
 void restore_network(FILE* fp){
     printf("[restore_network] network is not empty: restore from 'network_status.txt'\n");
     
@@ -370,6 +367,8 @@ void restore_network(FILE* fp){
     
     printf("\n[restore_network] got devices info\n");
 }
+
+
 //* //////////////////////////////////////////////////////////////////////
 
 //prende opcode dal device (recv), poi lo fa gestire da un 

@@ -349,7 +349,6 @@ void handle_chat(int sock) {
                 }
                 else if(i == sock){
                     // received message
-                    //todo: find device who is sending message
                     // ret = find_device_from_socket(sock);
                     // printf("[%s]: ", devices[ret].username);
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
