@@ -7,6 +7,7 @@
 
 //-----------     SERVER    -----------------
 int my_port;
+char my_time[8];
 struct sockaddr_in my_addr;
 
 //-----------     DEVICES    -----------------
@@ -101,7 +102,7 @@ void esc_command(){
     exit(0);
 }
 
-//? da usare??
+/*
 void print_command(){
     int i;
 
@@ -125,14 +126,23 @@ void print_command(){
     }
     fclose(fp_f);
 }
+*/
+
 //fix: maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
 //*                              UTILITY                                ///
 //* ///////////////////////////////////////////////////////////////////////
 
 void boot_message(){
-    //todo: add timer and port info
+    //add time value
+    time_t rawtime;
+    struct tm* tv;
+    time(&rawtime);
+    tv = localtime(&rawtime);
+    strftime(my_time, 9, "%X", tv);
+
     printf("**********************SERVER STARTED**********************\n");
+    printf("\tstart_time: %s\n\tport: %d\n", my_time, my_port);
     help_command();
 }
 

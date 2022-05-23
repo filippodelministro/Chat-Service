@@ -291,8 +291,6 @@ void handle_chat_w_server(){
 
     while(true){
         //keyboard: sending message
-        //todo: force to remain in same line
-        // printf("[%s]: ", my_device.username);
         fgets(msg, BUFFER_SIZE, stdin);
 
         //sending while user type "\q"
@@ -330,8 +328,6 @@ void handle_chat(int sock) {
                 if (i == 0) {
                     //keyboard: sending message
                     //fix: double user [time] at first send
-                    //todo: force to remain in same line
-                    // printf("[%s]: ", my_device.username);
                     fgets(msg, BUFFER_SIZE, stdin);
 
                     //sending until user type "\q"
@@ -348,9 +344,7 @@ void handle_chat(int sock) {
                     send(sock, buffer, BUFFER_SIZE, 0);
                 }
                 else if(i == sock){
-                    // received message
-                    // ret = find_device_from_socket(sock);
-                    // printf("[%s]: ", devices[ret].username);
+                    //received message
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
                     //receive messages until other user type '\q'
                     if((recv_int2(sock, false)) == OK_CODE){
@@ -375,9 +369,12 @@ void handle_chat(int sock) {
                 //fix: controllare
                 else if(i == listening_socket){
                     //?inutile??;
+                    printf("BBBBBBBBBBB\n");
                 }
                 else if(i == server.sd){
                     //todo: gestire caso della ESC del server;
+                    printf("AAAAAAAAAA\n");
+
                     // server.connected = false;
                 }
             }
@@ -388,7 +385,7 @@ void handle_chat(int sock) {
 
 
 void handle_request(){
-    printf("[handle_request]\n");
+    printf("\n[handle_request]\n");
 
     int s_sd, s_id, s_port;
     char s_username[BUFFER_SIZE];
@@ -835,16 +832,16 @@ int main(int argc, char* argv[]){
                     handle_request();
                 }
                 
-                else if(i == server.sd){
-                    //connection request by server
-                    // i = recv_int(server.sd);
-                    // printf("[device] TEST: received %d\n", i);
+                // else if(i == server.sd){
+                //     //connection request by server
+                //     // i = recv_int(server.sd);
+                //     // printf("[device] TEST: received %d\n", i);
 
-                    printf("\t\ti == server.sd\n");
-                    int opcode = recv_int2(server.sd, true);
-                    if(opcode == OUT_OPCODE)
-                        printf("[device] SERVER E' OFFLINE\n");
-                }
+                //     printf("\t\ti == server.sd\n");
+                //     int opcode = recv_int2(server.sd, true);
+                //     if(opcode == OUT_OPCODE)
+                //         printf("[device] SERVER E' OFFLINE\n");
+                // }
                 
 
                 //clear buffer and prompt
