@@ -33,7 +33,8 @@
 #define ERR_CODE            65535
 #define OK_CODE             65534
 #define QUIT_CODE           65533
-#define ADD_CODE            65532
+#define USER_CODE           65532
+#define ADD_CODE            65531
 
 char* DELIMITER = "-";
 

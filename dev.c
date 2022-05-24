@@ -27,7 +27,8 @@ struct device{
 
 struct device my_device;
 
-int n_dev;                 //number of devices registred
+int n_dev;                  //number of devices registred
+int n_dev_chat;             //number of devices in chat
 
 //-----------     SERVER    -----------------
 //server considered as a device
@@ -252,6 +253,10 @@ int check_chat_command(char* cmd){
         printf("[read_chat_command] Quit chat!\n");
         return QUIT_CODE;
     }
+    else if(!strncmp(cmd, "\\u", 2)){
+        //add new device to chat
+        return USER_CODE;
+    }
     else if(!strncmp(cmd, "\\a", 2)){
         //add new device to chat
         printf("[device] Type <user> to add to this chat.\n[device] <user> has to be online!\n");
@@ -336,15 +341,37 @@ void handle_chat(int sock) {
                         append_time(buffer, msg);
                         //send in any case message: if command, inform other device=
                         //todo: convert in send_msg (remove BUFFER_SIZE)
-                        send(sock, buffer, BUFFER_SIZE, 0);
+                        for(int i=0; i<n_dev_chat; i++){
+                            send(sock, buffer, BUFFER_SIZE, 0);
+                        }
                         
                         break;
                     case QUIT_CODE:
                         FD_CLR(sock, &master);
                         return;
 
+                    case USER_CODE:
+                        list_command();
+
+                        break;
                     case ADD_CODE:
-                        //todo: send_int(altro device)
+                        //get new device info and send to all chat_devices
+                        update_devices();
+                        scanf("%s", msg);
+                        int n_id = find_device(msg);
+                        send_int(n_id, sock);
+
+                        if(n_id == -1){
+                            printf("[device] user '%s' doesnt exists!\n", msg);
+                            break;
+                        }
+
+                        if(!devices[n_id].connected){
+                            printf("[device] user '%s' is not online!\n", msg);
+                            break;
+                        }
+
+                        //if here chat with new user can start
 
                         break;
                     
@@ -357,9 +384,11 @@ void handle_chat(int sock) {
                 else if(i == sock){
                     //received message
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
-                    //receive messages until other user type '\q'
-                    if((recv_int2(sock, false)) == OK_CODE){
-                        if(recv(sock, (void*)buffer, BUFFER_SIZE, 0) == 0){
+                    code = recv_int2(sock, false);
+
+                    switch (code){
+                    case OK_CODE:
+                       if(recv(sock, (void*)buffer, BUFFER_SIZE, 0) == 0){
                             //todo: handle this case
                             printf("Other device quit!\n");
                             FD_CLR(sock, &master);
@@ -367,13 +396,45 @@ void handle_chat(int sock) {
                             return;
                         }
                         printf("%s", buffer);
-                    }
-                    else{
+                        
+                        break;
+                    case QUIT_CODE:
                         printf("[device] Other device quit...\n");
                         sleep(1);
                         printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
                         close(sock);
+                        return;
+                        return;
+
+                    case USER_CODE:
+                        // printf("[device] to add new user to chat type '\\a' <user>. User have to be online\n");
+                        // list_command();
+
+                        break;
+                    case ADD_CODE:
+                        int n_id = recv_int2(sock, true);
+                        printf("[device] received 'add_command' from other device\n");
+                        if(n_id == ERR_CODE){
+                            printf("[device] failed: new device doesnt exists\n");
+                            break;
+                        }
+
+                        if(!devices[n_id].connected){
+                            printf("[device] failed: new device is not online\n");
+                            // FD_CLR(sock, &master);
+                            // close(sock);
+                            break;
+                        }
+                        // update_devices();
+                        printf("[device] other device want to add user '%s' to this chat\n", devices[n_id].username);
+                        
+                        //todo: send_int(altro device)
+
+                        break;
+                    
+                    default:
+                        printf("[handle_chat] error: chat_command is not valid\n");
                         return;
                     }
                 }
@@ -433,7 +494,7 @@ void handle_request(){
 
     update_devices();
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
-    
+    printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
 
@@ -448,6 +509,7 @@ void handle_request(){
     
     handle_chat(s_sd);
     close(s_sd);
+    n_dev_chat = 0;
     // return;
 }
 
@@ -686,8 +748,10 @@ void chat_command(){
         //handshake with receiver
         send_int(my_device.id, r_sd);
 
+        n_dev_chat = 1;         //used in chat and incremented in '\a' case
         handle_chat(r_sd);
         close(r_sd);
+        n_dev_chat = 0;
     }
 
     chat_end:
@@ -810,6 +874,7 @@ int main(int argc, char* argv[]){
 
     my_device.port = atoi(argv[1]);
     server.connected = true;
+    n_dev = n_dev_chat = 0;
 
    //Initialise set structure 
 	fdt_init();
