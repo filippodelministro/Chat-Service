@@ -102,6 +102,20 @@ void esc_command(){
     exit(0);
 }
 
+bool check_if_online(int);
+void check_command(){
+    n_conn = 0;
+    for(int i=0; i<n_dev; i++){
+        if(check_if_online(i)){
+            devices[i].connected = true;
+            n_conn++;
+        }
+        else
+            devices[i].connected = false;
+    }
+}
+
+
 /*
 void print_command(){
     int i;
@@ -164,6 +178,8 @@ void read_command(){
         list_command();
     else if(!strncmp(cmd, "esc", 3))
         esc_command();
+    else if(!strncmp(cmd, "check", 5))
+        check_command();
     else{
         printf("[server] command is not valid!\n");
         help_command();
@@ -269,7 +285,17 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
     return ERR_CODE;
 }
-
+bool check_if_online(int id){
+    int sd = create_chat_socket(id);
+    if(sd != -1){
+            //if connection doesnt fail, device is online
+            send_int(ERR_CODE, sd);
+            send_int(IN_OPCODE, sd);
+            return true;
+        }
+        else
+            return false;
+}
 int create_chat_socket(int id){
 
     //create socket
@@ -363,6 +389,7 @@ void restore_network(FILE* fp){
         d->port = atoi(b);
 
         //inform devices that server is online
+        //todo: change with check_if_online(i)
         int sd = create_chat_socket(i);
         if(sd != -1){
             //if connection doesnt fail, device is online
@@ -377,7 +404,6 @@ void restore_network(FILE* fp){
     
     printf("\n[restore_network] got devices info\n");
 }
-
 
 //* //////////////////////////////////////////////////////////////////////
 
