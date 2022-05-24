@@ -26,9 +26,7 @@ struct device{
 }devices[MAX_DEVICES];
 
 struct device my_device;
-
 int n_dev;                  //number of devices registred
-int n_dev_chat;             //number of devices in chat
 
 //-----------     SERVER    -----------------
 //server considered as a device
@@ -41,6 +39,10 @@ int listening_socket;    //socket listener (get connect request)
 fd_set master;          //main set: managed with macro 
 fd_set read_fds;        //read set: managed from select() 
 int fdmax;
+
+//-----------    CHAT   -----------------
+int chat_devices[MAX_DEVICES];      //array of IDs of device in a chat
+int n_dev_chat;                     //number of devices in chat
 
 //maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
@@ -79,7 +81,6 @@ void send_opcode(int op){
 
 //*manage socket
 void create_srv_socket_tcp(int p){
-
     // printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
     server.port = p;
 
@@ -176,7 +177,6 @@ void dev_init(int id, const char* usr, const char* pswd){
                     d->id, d->username, d->password
     );
 }
-
 void update_devices(){
     /*update other devices info; ask to server follwing info for each device registered:
         username | port | status*/
@@ -209,7 +209,19 @@ void update_devices(){
     }
     close(server.sd);
 }
+int find_device(const char* usr){
+    //find device from username
+    int i;
 
+    printf("[device] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
+    for(i=0; i<n_dev; i++){
+        struct device *d = &devices[i];
+        
+        if(!strcmp(d->username, usr))
+            return i;    
+    }
+    return -1;      //not found
+}
 /*
 int find_device_from_socket(int sd){
     int i;
@@ -226,19 +238,6 @@ int find_device_from_socket(int sd){
 }
 */
 
-int find_device(const char* usr){
-    //find device from username
-    int i;
-
-    printf("[device] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(!strcmp(d->username, usr))
-            return i;    
-    }
-    return -1;      //not found
-}
 
 //*manage chats
 void list_command();
@@ -253,6 +252,9 @@ int check_chat_command(char* cmd){
     }
     else if(!strncmp(cmd, "\\a", 2)){
         return ADD_CODE;
+    }
+    else if(!strncmp(cmd, "\\s", 2)){
+        return SHARE_CODE;
     }
 
     return OK_CODE;
@@ -306,6 +308,9 @@ void handle_chat_w_server(){
             break;
         case ADD_CODE:
             printf("[device] Error: command is not valid: other device is offline\n");
+            break;
+        case SHARE_CODE:
+            printf("[device] //todo GESTIRE QUESTO CASOOOOOO\n");
             break;
         default:
             printf("[handle_chat_w_server] error: chat_command is not valid\n");
@@ -384,7 +389,31 @@ void handle_chat(int sock) {
                         //if here chat with new user can start
 
                         break;
-                    
+                    case SHARE_CODE:
+                        //get filename and check if file exists
+
+                        printf("[device] type <filename> to share\n");
+                        //fix: dont work: print it in file
+                        /*
+                        system("ls");
+                        scanf("%s", msg);
+
+
+                        FILE *fp = fopen(msg, "r");
+                        if(fp == NULL){
+                            printf("[device] file '%s' does not exists!\n");
+                            send_int(ERR_CODE, sock);
+                            break;
+                        }
+                        
+                        //file eixists: sending it
+                        send_int(OK_CODE, sock);
+                        send_file(fp, sock);
+                        fclose(fp);
+                        */
+                        printf("[device] shared file\n");
+                        break;
+
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
                         return;
@@ -440,6 +469,23 @@ void handle_chat(int sock) {
                         printf("[device] adding user '%s' to this chat\n", devices[n_id].username);
                         break;
                     
+                    case SHARE_CODE:
+                        //create file to save file
+
+                        printf("SHARE_CODE\n");
+
+                        //fix: dont work: print it in file
+                        /*
+                        if((recv_int2(sock, false)) == ERR_CODE){
+                            printf("[device] file transfer failed: sender error!\n");
+                            break;
+                        }
+                        recv_file(sock);
+                        */
+
+                        printf("[device] received file\n");
+                        break;
+                    
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
                         return;
@@ -459,7 +505,6 @@ void handle_chat(int sock) {
             }
         }
     }
-    
 }
 
 
@@ -767,12 +812,36 @@ void chat_command(){
 }
 
 void share_command(){
-    //first handshake
-    create_srv_socket_tcp(server.port);
-    send_opcode(SHARE_OPCODE);
-    sleep(1);
-    // send_int(my_device.id, server);
+    int r_id, r_sd;
+    char filename[WORD_SIZE];
+    char receiver[WORD_SIZE];
 
+    update_devices();
+
+    //get info from user
+    scanf("%s", filename);
+    scanf("%s", receiver);
+    
+    //check if receiver exists & is online, and if file exists
+    if(find_device(receiver) == -1){
+        printf("[device] user '%s' does not exists!\n", receiver);
+        return;
+    }
+
+    //todo: handle case receiver is offline
+
+    FILE* fp = fopen(filename, "r");
+    if(fp == NULL){
+        printf("[device] file '%s' does not exists!\n", filename);
+        return;
+    }
+
+    //send file
+    r_sd = create_chat_socket(r_id);
+
+    send_file(fp, r_sd);
+
+    fclose(fp);
     printf("COMANDO SHARE ESEGUITO \n");
 }
 

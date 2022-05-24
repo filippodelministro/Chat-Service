@@ -35,6 +35,7 @@
 #define QUIT_CODE           65533
 #define USER_CODE           65532
 #define ADD_CODE            65531
+#define SHARE_CODE          65530
 
 char* DELIMITER = "-";
 
@@ -148,4 +149,38 @@ int recv_msg2(int sd, char* ret, bool show){
 void prompt(){
 	printf("\n> ");
     fflush(stdout);
+}
+
+void send_file(FILE *fp, int sd){
+  int n;
+  char buff[BUFFER_SIZE] = {0};
+
+  while(fgets(buff, BUFFER_SIZE, fp) != NULL) {
+    if(send(sd, buff, sizeof(buff), 0) == -1) {
+      perror("[send_file] Error!\n");
+      exit(1);
+    }
+
+    bzero(buff, BUFFER_SIZE);
+  }
+}
+
+void recv_file(int sd){
+  int n;
+  FILE *fp;
+  char *filename = "recv.txt";
+  char buffer[BUFFER_SIZE];
+
+  fp = fopen(filename, "w");
+  while(true){
+    n = recv(sd, buffer, BUFFER_SIZE, 0);
+    if (n <= 0){
+        break;
+        return;
+    }
+    fprintf(fp, "%s", buffer);
+    bzero(buffer, BUFFER_SIZE);
+  }
+
+  return;
 }
