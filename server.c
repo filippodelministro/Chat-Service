@@ -690,6 +690,7 @@ int main(int argc, char** argv){
     while(true){
         int i;
         read_fds = master;
+        //todo: set check_command() as a deamon
 
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("[server] error: select() ");

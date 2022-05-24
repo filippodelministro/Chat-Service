@@ -155,7 +155,6 @@ int create_chat_socket(int id){
         exit(-1);
     }
 
-    printf("[device] create_chat_socket: END\n");
     return devices[id].sd;
 }
 
@@ -315,7 +314,7 @@ void handle_chat(int sock) {
     //// bool first_interaction = true;
 
     FD_SET(sock, &master);
-    fdmax = sock;
+    if(sock > fdmax){fdmax = sock;}
     system("clear");
 
     while(true){
@@ -484,7 +483,7 @@ void handle_request(){
             printf("[device] server is online!\n");
             server.connected = true;
             break;
-        
+
         default:
             printf("[device] Error in server command!\n");
             break;
@@ -898,7 +897,7 @@ int main(int argc, char* argv[]){
 
             if(FD_ISSET(i, &read_fds)){
                 
-                if(i == 0){
+                if(!i){
                     //keyboard
                     read_command();
                 }
