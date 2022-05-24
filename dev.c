@@ -245,24 +245,20 @@ int find_device(const char* usr){
 
 //*manage chats
 void list_command();
-bool check_chat_command(char* cmd){
+int check_chat_command(char* cmd){
     char user[WORD_SIZE];
 
     if(!strncmp(cmd, "\\q", 2)){
         printf("[read_chat_command] Quit chat!\n");
-        return true;
+        return QUIT_CODE;
     }
     else if(!strncmp(cmd, "\\a", 2)){
         //add new device to chat
         printf("[device] Type <user> to add to this chat.\n[device] <user> has to be online!\n");
-        list_command();
-        scanf("%s", user);
-        printf("[read_chat_command] Add '%s' to chat!\n", user);
-        //todo: add check Y/N to connect
-        return true;
+        return ADD_CODE;
     }
 
-    return false;
+    return OK_CODE;
 }
 void append_time(char * buffer, char *msg){
     time_t rawtime; 
@@ -325,23 +321,38 @@ void handle_chat(int sock) {
         }
         for (i = 0; i <= fdmax; i++) {
 			if(FD_ISSET(i, &read_fds)) {
-                if (i == 0) {
+                if (!i) {
                     //keyboard: sending message
                     //fix: double user [time] at first send
                     fgets(msg, BUFFER_SIZE, stdin);
 
-                    //sending until user type "\q"
-                    code = ((check_chat_command(msg)) ? ERR_CODE : OK_CODE);
+                    //check chat_command and handle different cases
+                    code = check_chat_command(msg);
                     send_int(code, sock);
-                    if(code == ERR_CODE){
+                    
+                    switch (code){
+                    case OK_CODE:
+                        //message: format message and send it
+                        append_time(buffer, msg);
+                        //send in any case message: if command, inform other device=
+                        //todo: convert in send_msg (remove BUFFER_SIZE)
+                        send(sock, buffer, BUFFER_SIZE, 0);
+                        
+                        break;
+                    case QUIT_CODE:
                         FD_CLR(sock, &master);
+                        return;
+
+                    case ADD_CODE:
+                        //todo: send_int(altro device)
+
+                        break;
+                    
+                    default:
+                        printf("[handle_chat] error: chat_command is not valid\n");
                         return;
                     }
 
-                    append_time(buffer, msg);
-                    //send in any case message: if command, inform other device=
-                    //todo: convert in send_msg (remove BUFFER_SIZE)
-                    send(sock, buffer, BUFFER_SIZE, 0);
                 }
                 else if(i == sock){
                     //received message
