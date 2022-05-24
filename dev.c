@@ -294,16 +294,29 @@ void handle_chat_w_server(){
         fgets(msg, BUFFER_SIZE, stdin);
 
         //sending while user type "\q"
-        code = ((check_chat_command(msg)) ? ERR_CODE : OK_CODE);
-        send_int(code, server.sd);
-        if(code == ERR_CODE)
+        code = (check_chat_command(msg));
+        if(code == OK_CODE || code == QUIT_CODE)    //sending only valid command
+            send_int(code, server.sd);
+        
+        switch (code){
+        case OK_CODE:
+            append_time(buffer, msg);
+            //todo: convert in send_msg (remove BUFFER_SIZE)
+            send(server.sd, buffer, BUFFER_SIZE, 0);
             break;
 
-        append_time(buffer, msg);
-        
-        //todo: convert in send_msg (remove BUFFER_SIZE)
-        send(server.sd, buffer, BUFFER_SIZE, 0);
-        
+        case QUIT_CODE:
+            return;
+        case USER_CODE:
+            printf("[device] Error: command not valid because other device is offline\n");
+            break;
+        case ADD_CODE:
+            printf("[device] Error: command not valid because other device is offline\n");
+            break;
+        default:
+            printf("[handle_chat] error: chat_command is not valid\n");
+            return;
+        }
     }
 }
 

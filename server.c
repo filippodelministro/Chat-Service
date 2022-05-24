@@ -537,7 +537,6 @@ void handle_request(){
         else{
             //request device is offline: server manage chat with new_dev  
             printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
-
             
             //*check if directory already exists before create;
                 //*create a directory for all the pending_messages
