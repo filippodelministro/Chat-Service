@@ -190,14 +190,14 @@ void update_devices(){
     send_opcode(UPDATE_OPCODE);
     sleep(1);
 
-    n_dev = recv_int2(server.sd, false);
+    n_dev = recv_int(server.sd, false);
     for(int i=0; i<n_dev; i++){
         d = &devices[i];
         
         //receive other devices info
-        recv_msg2(server.sd, buffer, false);
-        int port = recv_int2(server.sd, false);
-        int online = recv_int2(server.sd, false);
+        recv_msg(server.sd, buffer, false);
+        int port = recv_int(server.sd, false);
+        int online = recv_int(server.sd, false);
         bool connected = ((online == OK_CODE) ? true : false);
 
         d->id = i;
@@ -427,7 +427,7 @@ void handle_chat(int sock) {
                 else if(i == sock){
                     //received message
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
-                    code = recv_int2(sock, false);
+                    code = recv_int(sock, false);
 
                     switch (code){
                     case OK_CODE:
@@ -457,7 +457,7 @@ void handle_chat(int sock) {
                         break;
 
                     case ADD_CODE:
-                        int n_id = recv_int2(sock, true);
+                        int n_id = recv_int(sock, true);
                         printf("[device] received 'add_command' from other device\n");
                         update_devices();
                         
@@ -477,13 +477,13 @@ void handle_chat(int sock) {
                         printf("[device] other device is sending you a file: wait...\n");
 
                         //receive OK_CODE to start file transaction, than receive file
-                        if((recv_int2(sock, true)) == ERR_CODE){
+                        if((recv_int(sock, true)) == ERR_CODE){
                             printf("[device] file transfer failed: sender error!\n");
                             break;
                         }
 
                         char type[WORD_SIZE];
-                        recv_msg2(sock, type, true);
+                        recv_msg(sock, type, true);
 
                         printf("[device] receiving %s file...\n", type);
                         recv_file(sock, type);
@@ -528,12 +528,12 @@ void handle_request(){
     printf("[handle_request] accepted\n");
 
     //receive sender info: can be server [ERR_CODE] or a device [ID]
-    s_id = recv_int2(s_sd, true);
+    s_id = recv_int(s_sd, true);
 
     if(s_id == ERR_CODE){
         //sender is server
         printf("[handle_request] request by server\n");
-        int cmd = recv_int2(s_sd, true);
+        int cmd = recv_int(s_sd, true);
         switch (cmd){
         case ESC_OPCODE:
             printf("[device] server is now offline!\n");
@@ -648,7 +648,7 @@ void signup_command(){
     send(server.sd, buffer, strlen(buffer), 0);
 
     //receive dev_id
-    int dev_id = recv_int2(server.sd, false);
+    int dev_id = recv_int(server.sd, false);
     if(dev_id == ERR_CODE){
         printf("[device] Error in signup: username '%s' not available!\n", username);
         close(server.sd);
@@ -705,7 +705,7 @@ void in_command(){
     send_int(my_device.port, server.sd);
 
     //receiving ACK to connection
-    if(recv_int2(server.sd, false) == ERR_CODE){
+    if(recv_int(server.sd, false) == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
         return;
@@ -869,7 +869,7 @@ void out_command(){
     send_msg(my_device.password, server.sd);
     
     //wait ACK from server to safe disconnect
-    if(recv_int2(server.sd, false) == OK_CODE){
+    if(recv_int(server.sd, false) == OK_CODE){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
@@ -994,11 +994,11 @@ int main(int argc, char* argv[]){
                 
                 // else if(i == server.sd){
                 //     //connection request by server
-                //     // i = recv_int2(server.sd, false);
+                //     // i = recv_int(server.sd, false);
                 //     // printf("[device] TEST: received %d\n", i);
 
                 //     printf("\t\ti == server.sd\n");
-                //     int opcode = recv_int2(server.sd, true);
+                //     int opcode = recv_int(server.sd, true);
                 //     if(opcode == OUT_OPCODE)
                 //         printf("[device] SERVER E' OFFLINE\n");
                 // }

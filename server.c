@@ -434,7 +434,7 @@ void handle_request(){
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
-    opcode = recv_int2(new_dev, false);
+    opcode = recv_int(new_dev, false);
     printf("opcode: %d\n", opcode);
 
     //fix: semmai fare una fork() qui
@@ -473,8 +473,8 @@ void handle_request(){
         strcpy(password, strtok(NULL, DELIMITER));
 
         //receive id & port
-        id = recv_int2(new_dev, false);
-        port = recv_int2(new_dev, false);
+        id = recv_int(new_dev, false);
+        port = recv_int(new_dev, false);
 
         //add device to list and connect & sending ACK to connection      
         ret = check_and_connect(id, port, username, password);
@@ -510,8 +510,8 @@ void handle_request(){
         struct stat st = {0};      //?
 
         //get sender & receiver info
-        s_id = recv_int2(new_dev, false);
-        r_id = recv_int2(new_dev, false);
+        s_id = recv_int(new_dev, false);
+        r_id = recv_int(new_dev, false);
 
         //check if receiver is registered
         if(r_id >= n_dev){
@@ -567,7 +567,7 @@ void handle_request(){
             // }
 
             //device is now running handle_chat_w_server() function
-            while((recv_int2(new_dev, false)) == OK_CODE){
+            while((recv_int(new_dev, false)) == OK_CODE){
                 //todo: convert in send_msg (remove BUFFER_SIZE)
                 ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
                 //todo: make it invisible for server
@@ -593,15 +593,15 @@ void handle_request(){
 
     case OUT_OPCODE:
         //get id from device
-        id = recv_int2(new_dev, false);
+        id = recv_int(new_dev, false);
         printf("id ricevuto: %d\n", id);
         d = &devices[id];
 
         printf("[server] authentication for user %d\n", id);
 
         //get username & password for autentication
-        recv_msg(new_dev, username);
-        recv_msg(new_dev, password);
+        recv_msg(new_dev, username, false);
+        recv_msg(new_dev, password, false);
         if(strcmp(d->username, username) || strcmp(d->password, password)){
             printf("[server] authentication failed: OUT not safe!\n");
             send_int(ERR_CODE, new_dev);

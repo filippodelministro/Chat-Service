@@ -62,7 +62,7 @@ int recv_int(int sd){
 }
 */
 
-int recv_int2(int sd, bool show){
+int recv_int(int sd, bool show){
     int num;
     uint16_t num_;
     if(!recv(sd, (void*)&num_, sizeof(uint16_t), 0)){
@@ -109,29 +109,8 @@ void send_msg(char *str, int sd){
     }
 }
 
-/*
-#define recv_msg(...) OVERLOAD(recv_msg, (__VA_ARGS__), \
-    (recv_msg1, (int, char*)), \
-    (recv_msg2, (int, char*, bool)), \
-)
-*/
-
-void recv_msg(int sd, char* ret){
-    int len = recv_int2(sd, false);
-
-    char buf[len];
-
-    recv(sd, (void*)&buf, len, 0);
-    buf[len] = '\0';
-    printf("recv_msg: received '%s'\n", buf);
-
-    strcpy(ret, buf);
-    ret = buf;
-}
-
-//todo: overloading of functions
-int recv_msg2(int sd, char* ret, bool show){
-    int len = recv_int2(sd, show);
+int recv_msg(int sd, char* ret, bool show){
+    int len = recv_int(sd, show);
     int ok;
 
     char buf[len];
@@ -167,7 +146,7 @@ void recv_file(int sd, char type[WORD_SIZE]){
     printf("[recv_file] opened '%s'\n", namefile);
 
     while(true){
-        int code = recv_int2(sd, false);
+        int code = recv_int(sd, false);
         if(code == OK_CODE){
             n = recv(sd, buffer, BUFFER_SIZE, 0);
             fprintf(fp, "%s", buffer);
