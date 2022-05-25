@@ -394,23 +394,24 @@ void handle_chat(int sock) {
 
                         printf("[device] type <filename> to share\n");
                         //fix: dont work: print it in file
-                        /*
                         system("ls");
                         scanf("%s", msg);
 
 
                         FILE *fp = fopen(msg, "r");
                         if(fp == NULL){
-                            printf("[device] file '%s' does not exists!\n");
+                            printf("[device] file '%s' does not exists!\n", msg);
                             send_int(ERR_CODE, sock);
                             break;
                         }
                         
                         //file eixists: sending it
                         send_int(OK_CODE, sock);
+                        
+                        printf("[device] sending file...\n");
                         send_file(fp, sock);
-                        fclose(fp);
-                        */
+
+                        // fclose(fp);
                         printf("[device] shared file\n");
                         break;
 
@@ -475,13 +476,12 @@ void handle_chat(int sock) {
                         printf("SHARE_CODE\n");
 
                         //fix: dont work: print it in file
-                        /*
-                        if((recv_int2(sock, false)) == ERR_CODE){
+                        if((recv_int2(sock, true)) == ERR_CODE){
                             printf("[device] file transfer failed: sender error!\n");
                             break;
                         }
+                        printf("[device] receiving file...\n");
                         recv_file(sock);
-                        */
 
                         printf("[device] received file\n");
                         break;

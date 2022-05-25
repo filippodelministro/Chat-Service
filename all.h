@@ -151,36 +151,52 @@ void prompt(){
     fflush(stdout);
 }
 
-void send_file(FILE *fp, int sd){
-  int n;
-  char buff[BUFFER_SIZE] = {0};
-
-  while(fgets(buff, BUFFER_SIZE, fp) != NULL) {
-    if(send(sd, buff, sizeof(buff), 0) == -1) {
-      perror("[send_file] Error!\n");
-      exit(1);
-    }
-
-    bzero(buff, BUFFER_SIZE);
-  }
-}
-
 void recv_file(int sd){
-  int n;
-  FILE *fp;
-  char *filename = "recv.txt";
-  char buffer[BUFFER_SIZE];
+    printf("[recv_file] start\n");
+    int n;
+    FILE *fp;
+    char buffer[WORD_SIZE];
 
-  fp = fopen(filename, "w");
-  while(true){
-    n = recv(sd, buffer, BUFFER_SIZE, 0);
-    if (n <= 0){
-        break;
-        return;
+    fp = fopen("recv.txt", "w");
+    int i=0;
+    printf("[recv_file] opened\n");
+
+    while(true){
+        int code = recv_int2(sd, true);
+        if(code == OK_CODE){
+            n = recv(sd, buffer, WORD_SIZE, 0);
+            printf("[recv_file] iter: %d\tn: %d\n", i, n);
+
+            fprintf(fp, "%s", buffer);
+            bzero(buffer, WORD_SIZE);
+            i++;
+        }
+        else{
+            printf("[recv_file] end\n");
+            fclose(fp);
+            return;
+        }
     }
-    fprintf(fp, "%s", buffer);
-    bzero(buffer, BUFFER_SIZE);
-  }
-
-  return;
 }
+
+void send_file(FILE *fp, int sd){
+    int n;
+    char buff[WORD_SIZE] = {0};
+
+    while (true){
+        if(fgets(buff, WORD_SIZE, fp) != NULL){
+            send_int(OK_CODE, sd);
+            if(send(sd, buff, sizeof(buff), 0) == -1) {
+                perror("[send_file] Error!\n");
+                exit(1);
+            }
+            bzero(buff, WORD_SIZE);
+        }
+        else{
+            send_int(ERR_CODE, sd);
+            return;
+        }
+    }
+}
+
+
