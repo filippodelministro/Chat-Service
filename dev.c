@@ -405,10 +405,16 @@ void handle_chat(int sock) {
                         //file exists: sending it
                         send_int(OK_CODE, sock);
                         
-                        printf("[device] sending file...\n");
+                        //get file type from name
+                        char* name = strtok(msg, ".");
+                        char* type = strtok(NULL, ".");
+                        //todo: ad check on name
+
+                        //send type, than file
+                        printf("[device] sending %s file...\n", type);
+                        send_msg(type, sock);
                         send_file(fp, sock);
                         fclose(fp);
-
                         printf("[device] file shared!\n");
                         break;
 
@@ -475,13 +481,17 @@ void handle_chat(int sock) {
                             printf("[device] file transfer failed: sender error!\n");
                             break;
                         }
-                        printf("[device] receiving file...\n");
-                        recv_file(sock);
+
+                        char type[WORD_SIZE];
+                        recv_msg2(sock, type, true);
+
+                        printf("[device] receiving %s file...\n", type);
+                        recv_file(sock, type);
                         struct stat st;
                         stat("recv.txt", &st);
                         int size = st.st_size;
                         
-                        printf("[device] received %d byte: check 'recv.txt'\n", size);
+                        printf("[device] received %d byte: check 'recv.%s'\n", size, type);
                         break;
                     
                     default:

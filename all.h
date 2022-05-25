@@ -151,14 +151,18 @@ void prompt(){
     fflush(stdout);
 }
 
-void recv_file(int sd){
+void recv_file(int sd, char type[WORD_SIZE]){
     printf("[recv_file] start\n");
     FILE *fp;
     int n;
     char buffer[BUFFER_SIZE];
 
-    fp = fopen("recv.txt", "w");
-    printf("[recv_file] opened 'recv.txt'\n");
+    char namefile[WORD_SIZE];
+    sprintf(namefile, "recv.%s", type);
+    printf("%s\n", namefile);
+
+    fp = fopen(namefile, "w");
+    printf("[recv_file] opened '%s'\n", namefile);
 
     while(true){
         int code = recv_int2(sd, false);
