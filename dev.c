@@ -648,7 +648,7 @@ void signup_command(){
     send(server.sd, buffer, strlen(buffer), 0);
 
     //receive dev_id
-    int dev_id = recv_int(server.sd);
+    int dev_id = recv_int2(server.sd, false);
     if(dev_id == ERR_CODE){
         printf("[device] Error in signup: username '%s' not available!\n", username);
         close(server.sd);
@@ -705,7 +705,7 @@ void in_command(){
     send_int(my_device.port, server.sd);
 
     //receiving ACK to connection
-    if(recv_int(server.sd) == ERR_CODE){
+    if(recv_int2(server.sd, false) == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
         return;
@@ -869,7 +869,7 @@ void out_command(){
     send_msg(my_device.password, server.sd);
     
     //wait ACK from server to safe disconnect
-    if(recv_int(server.sd) == OK_CODE){
+    if(recv_int2(server.sd, false) == OK_CODE){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");
     }
@@ -994,7 +994,7 @@ int main(int argc, char* argv[]){
                 
                 // else if(i == server.sd){
                 //     //connection request by server
-                //     // i = recv_int(server.sd);
+                //     // i = recv_int2(server.sd, false);
                 //     // printf("[device] TEST: received %d\n", i);
 
                 //     printf("\t\ti == server.sd\n");

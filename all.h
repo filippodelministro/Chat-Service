@@ -44,6 +44,7 @@ void send_int(int i, int sd){
     send(sd, (void*)&p, sizeof(uint16_t), 0);
 }
 
+/*
 int recv_int(int sd){
     int num;
     uint16_t num_;
@@ -59,6 +60,7 @@ int recv_int(int sd){
     
     return num;
 }
+*/
 
 int recv_int2(int sd, bool show){
     int num;
@@ -115,7 +117,7 @@ void send_msg(char *str, int sd){
 */
 
 void recv_msg(int sd, char* ret){
-    int len = recv_int(sd);
+    int len = recv_int2(sd, false);
 
     char buf[len];
 
