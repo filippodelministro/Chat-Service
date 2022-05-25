@@ -37,6 +37,7 @@ int fdmax;
 //     - lines: sender
 //     - coloumn: receiver
 // example: pending_messages[2][4] = 10 => device #2 sent 10 messages to device #4
+// this messages are saved in "./pending_messages/device_4/from_2.txt"
 int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
 //What a server user can use to interact with server
@@ -506,22 +507,23 @@ void handle_request(){
         //todo: handle
         // if(!authentication(id, new_dev))
         //      [...]
-
-        //get all pending messages for requesting device
-        int n_pend_dev = 0;
-        int n_pend_msg = 0;
-        for(int i=0; i<MAX_DEVICES; i++){
-            if(pending_messages[i][id]){
-                n_pend_dev++;
-                n_pend_msg += pending_messages[i][id];
-            }
-        }
+        //
 
         //sending premilimar info
+        // send_int(n_pend_msg, new_dev);
+        // send_int(n_pend_msg, new_dev);
+
+        //sending for each device: OK_CODE | sender_id | number of message from sender
+        for(int i=0; i<MAX_DEVICES; i++){
+            if(pending_messages[i][id]){
+                send_int(OK_CODE, new_dev);
+                send_int(i, new_dev);
+                send_int(pending_messages[i][id], new_dev);
+            }
+        }       
+
         // int pend_dev[n_pend_dev];
-        send_int(n_pend_msg, new_dev);
-        send_int(n_pend_msg, new_dev);
-        
+
         // char path[WORD_SIZE];
         // sprintf(path, "./pending_messages/device_%d", id);
         // FILE* fp = fopen("");

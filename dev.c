@@ -739,11 +739,26 @@ void hanging_command(){
     sleep(1);
 
     //get preliminar info
-    int n_pend_msg = recv_int(server.sd, false);
-    int n_pend_dev = recv_int(server.sd, false);
+    // int n_pend_msg = recv_int(server.sd, false);
+    // int n_pend_dev = recv_int(server.sd, false);
 
+    while(recv_int(server.sd, true) == OK_CODE){
+        recv_int(server.sd, true);  //sender_id
+        recv_int(server.sd, true);  //# of messages from sender
+    }
+
+    // if(!n_pend_msg){
+    //     printf("[device] any messages received\n");
+    //     goto hanging_end;
+    // }
+
+    //if here there are pending messages
     printf("[device] received %d messages from %d different devices\n", n_pend_msg, n_pend_dev);
 
+
+
+
+    hanging_end:
     printf("COMANDO HANGING ESEGUITO \n");
     close(server.sd);
 }
