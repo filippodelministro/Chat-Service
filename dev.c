@@ -310,7 +310,8 @@ void handle_chat_w_server(){
             printf("[device] Error: command is not valid: other device is offline\n");
             break;
         case SHARE_CODE:
-            printf("[device] //todo GESTIRE QUESTO CASOOOOOO\n");
+            //todo: se ho tempo cambiare e gestire in altro modo (send al server e poi al device)
+            printf("[device] Error: command is not valid: other device is offline\n"); 
             break;
         default:
             printf("[handle_chat_w_server] error: chat_command is not valid\n");
@@ -408,9 +409,8 @@ void handle_chat(int sock) {
                         //get file type from name
                         char* name = strtok(msg, ".");
                         char* type = strtok(NULL, ".");
-                        //todo: ad check on name
 
-                        //send type, than file
+                        //send type, than file to other device
                         printf("[device] sending %s file...\n", type);
                         send_msg(type, sock);
                         send_file(fp, sock);
@@ -531,8 +531,9 @@ void handle_request(){
     s_id = recv_int(s_sd, true);
 
     if(s_id == ERR_CODE){
-        //sender is server
+        //received request from server
         printf("[handle_request] request by server\n");
+
         int cmd = recv_int(s_sd, true);
         switch (cmd){
         case ESC_OPCODE:
@@ -552,6 +553,7 @@ void handle_request(){
         return;
     }
 
+    //received request from device
     update_devices();
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
@@ -571,27 +573,6 @@ void handle_request(){
     close(s_sd);
     n_dev_chat = 0;
     // return;
-}
-
-//create a chat with devices passed in chat_devices [n_dev] 
-void create_chat(int n_dev, int* chat_devices){
-    struct device* d;
-
-    printf("[create_chat] received chat_devices:\n");
-    for(int i=0; i<n_dev; i++)
-        printf("%d\n", chat_devices[i]);
-
-    printf("[create_chat] chat request for following devices:\n");
-    printf("\tid:\tusername:\tport\tonline\n");
-    for(int i=0; i<n_dev; i++){
-        if(i != my_device.id){
-            int id = chat_devices[i];
-            d = &devices[id];
-            printf("\t%d\t%s\t\t%d\tDAFARE\n",   //todo: online
-                d->id, d->username, d->port
-            );
-        }
-    }
 }
 
 //What a device user can use to interact with device
@@ -722,13 +703,11 @@ void in_command(){
 }
 
 void list_command(){
+    //print all devices info: id | username | port | status
     struct device* d;
-
     update_devices();
 
-    //// printf("-------------------------------------------------\n");
     printf("\tid\tusername\tport\tonline\t\n");
-    //// printf("-------------------------------------------------\n");
     for(int i=0; i<n_dev; i++){
         if(i == my_device.id) printf("=>");
 
@@ -739,7 +718,6 @@ void list_command(){
         if(d->connected) printf("x]\n");
         else printf(" ]\n");
     }
-    //// printf("-------------------------------------------------\n");
 }
 
 void hanging_command(){
@@ -808,14 +786,14 @@ void chat_command(){
         //handshake with receiver
         send_int(my_device.id, r_sd);
 
-        n_dev_chat = 1;         //used in chat and incremented in '\a' case
+        n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
         handle_chat(r_sd);
         close(r_sd);
         n_dev_chat = 0;
     }
 
     chat_end:
-    printf("COMANDO CHAT ESEGUITO \n");
+    printf("CHAT TASK COMPLETED\n");
     close(server.sd);
 }
 
@@ -850,7 +828,7 @@ void share_command(){
     send_file(fp, r_sd);
 
     fclose(fp);
-    printf("COMANDO SHARE ESEGUITO \n");
+    printf("CHAT TASK COMPLETED\n");
 }
 
 void out_command(){
@@ -892,7 +870,7 @@ void read_command(){
         printf("[device] server is offline: try later\n");
         return;
     }
-    //signup and in allowed only if not connected
+    //'signup' and 'in' allowed only if not connected
     //other command allowed only if connected
     if(!strncmp(cmd, "help", 4)){
         if(my_device.connected)

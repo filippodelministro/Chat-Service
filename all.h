@@ -44,24 +44,6 @@ void send_int(int i, int sd){
     send(sd, (void*)&p, sizeof(uint16_t), 0);
 }
 
-/*
-int recv_int(int sd){
-    int num;
-    uint16_t num_;
-    if(!recv(sd, (void*)&num_, sizeof(uint16_t), 0)){
-        perror("Error recv: \n");
-        exit(-1);
-    }
-    
-    num = ntohs(num_);
-    if(num == ERR_CODE){ printf("revc_int: received ERR_CODE!\n"); }
-    else if (num == OK_CODE) { printf("recv_int: received OK_CODE!\n"); }
-    else { printf("revc_int: received num %d\n", num); }
-    
-    return num;
-}
-*/
-
 int recv_int(int sd, bool show){
     int num;
     uint16_t num_;
@@ -83,8 +65,14 @@ int recv_int(int sd, bool show){
         case QUIT_CODE:
             printf("QUIT_CODE!\n");
             break;
+        case USER_CODE:
+            printf("USER_CODE!\n");
+            break;
         case ADD_CODE:
             printf("ADD_CODE!\n");
+            break;
+        case SHARE_CODE:
+            printf("SHARE_CODE!\n");
             break;
 
         default:

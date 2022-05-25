@@ -389,12 +389,7 @@ void restore_network(FILE* fp){
         d->port = atoi(b);
 
         //inform devices that server is online
-        //todo: change with check_if_online(i)
-        int sd = create_chat_socket(i);
-        if(sd != -1){
-            //if connection doesnt fail, device is online
-            send_int(ERR_CODE, sd);
-            send_int(IN_OPCODE, sd);
+        if(check_if_online(i)){
             d->connected = true;
             n_conn++;
         }
