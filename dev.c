@@ -238,6 +238,12 @@ int find_device_from_socket(int sd){
 }
 */
 
+void authentication(){    
+    //send username & password to server to authenticate
+    send_msg(my_device.username, server.sd);
+    send_msg(my_device.password, server.sd);
+}
+
 
 //*manage chats
 void list_command();
@@ -623,10 +629,12 @@ void signup_command(){
     sleep(1);
 
     //send username and password to server
-    strcat(buffer, username);
-    strcat(buffer, DELIMITER);
-    strcat(buffer, password);
-    send(server.sd, buffer, strlen(buffer), 0);
+    send_msg(username, server.sd);
+    send_msg(password, server.sd);    
+    // strcat(buffer, username);
+    // strcat(buffer, DELIMITER);
+    // strcat(buffer, password);
+    // send(server.sd, buffer, strlen(buffer), 0);
 
     //receive dev_id
     int dev_id = recv_int(server.sd, false);
@@ -721,14 +729,22 @@ void list_command(){
 }
 
 void hanging_command(){
+    printf("HANGING TASK START\n");
 
     //first handshake
     create_srv_socket_tcp(server.port);
     send_opcode(HANGING_OPCODE);
+    send_int(my_device.id, server.sd);
+    //todo // authentication();
     sleep(1);
 
+    //get preliminar info
+    int n_pend_msg = recv_int(server.sd, false);
+    int n_pend_dev = recv_int(server.sd, false);
+
+    printf("[device] received %d messages from %d different devices\n", n_pend_msg, n_pend_dev);
+
     printf("COMANDO HANGING ESEGUITO \n");
-    prompt();
     close(server.sd);
 }
 
@@ -843,6 +859,7 @@ void out_command(){
     //send dev_id to server
     send_int(my_device.id, server.sd);
     //sending username & password for autentication
+    //fix: use authentication()
     send_msg(my_device.username, server.sd);
     send_msg(my_device.password, server.sd);
     

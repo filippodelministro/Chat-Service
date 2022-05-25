@@ -33,6 +33,12 @@ fd_set master;          //main set: managed with macro
 fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
+// matrix for pending messages:
+//     - lines: sender
+//     - coloumn: receiver
+// example: pending_messages[2][4] = 10 => device #2 sent 10 messages to device #4
+int pending_messages[MAX_DEVICES][MAX_DEVICES];
+
 //What a server user can use to interact with server
 //* ///////////////////////////////////////////////////////////////////////
 //*                             COMMANDS                                ///
@@ -142,7 +148,6 @@ void print_command(){
 }
 */
 
-//fix: maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
 //*                              UTILITY                                ///
 //* ///////////////////////////////////////////////////////////////////////
@@ -159,10 +164,8 @@ void boot_message(){
     printf("\tstart_time: %s\n\tport: %d\n", my_time, my_port);
     help_command();
 }
-
-//read command from stdin
 void read_command(){
-    
+//read command from stdin
     char cmd[COMMAND_LENGHT];
     scanf("%s", cmd);
 
@@ -205,6 +208,7 @@ int find_device(const char* usr){
     }
     return -1;      //not found
 }
+//fix: inutile??
 int find_device_from_port(int port){
     int i;
 
@@ -218,21 +222,19 @@ int find_device_from_port(int port){
     return -1;      //not found
 }
 int add_dev(const char* usr, const char* pswd){
-//add deviceto devices list: return dev_id or -1 if not possible to add
+//add device to devices list: return dev_id or -1 if not possible to add
     
     if(n_dev >= MAX_DEVICES)
         return ERR_CODE;               
 
     if(find_device(usr) != -1)
         return ERR_CODE;                //device 'usr' already exists
-    // if(usr_exists(usr))
-    //     return ERR_CODE;
 
     struct device* d = &devices[n_dev];
 
     d->id = n_dev;
-    d->username = malloc(sizeof(usr));
-    d->password = malloc(sizeof(pswd));
+    d->username = malloc(sizeof(usr)+1);
+    d->password = malloc(sizeof(pswd)+1);
     strcpy(d->username, usr);
     strcpy(d->password, pswd);
 
@@ -400,6 +402,28 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] got devices info\n");
 }
 
+/*
+bool authentication(int id, int sock){
+    char usr[WORD_SIZE];
+    char pswd[WORD_SIZE];
+    
+    //receive device info from device
+    recv_msg(sock, usr, false);
+    recv_msg(sock, pswd, false);
+
+    //check if info are correct
+    if(strcmp(usr, devices[id].username)){
+        printf("[authentication] Error: username is not correct!\n");
+        return false;
+    }
+    if(strcmp(pswd, devices[id].password)){
+        printf("[authentication] Error: pswd is not correct!\n");
+        return false;
+    }
+
+    return true;
+}
+*/
 //* //////////////////////////////////////////////////////////////////////
 
 //prende opcode dal device (recv), poi lo fa gestire da un 
@@ -437,14 +461,8 @@ void handle_request(){
     case SIGNUP_OPCODE:                                                     
 
         //recevive username and password
-        if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-
-        //add device to device list
-        strcpy(username, strtok(buffer, DELIMITER));
-        strcpy(password, strtok(NULL, DELIMITER));
+        recv_msg(new_dev, username, true);
+        recv_msg(new_dev, password, true);
         ret = add_dev(username, password);
 
         //send dev_id 
@@ -483,8 +501,33 @@ void handle_request(){
     case HANGING_OPCODE:
         printf("HANGING BRANCH!\n");
 
+        id = recv_int(new_dev, false);
         
+        //todo: handle
+        // if(!authentication(id, new_dev))
+        //      [...]
 
+        //get all pending messages for requesting device
+        int n_pend_dev = 0;
+        int n_pend_msg = 0;
+        for(int i=0; i<MAX_DEVICES; i++){
+            if(pending_messages[i][id]){
+                n_pend_dev++;
+                n_pend_msg += pending_messages[i][id];
+            }
+        }
+
+        //sending premilimar info
+        // int pend_dev[n_pend_dev];
+        send_int(n_pend_msg, new_dev);
+        send_int(n_pend_msg, new_dev);
+        
+        // char path[WORD_SIZE];
+        // sprintf(path, "./pending_messages/device_%d", id);
+        // FILE* fp = fopen("");
+
+        close(new_dev);
+        prompt();
         break;
 
     case SHOW_OPCODE:
@@ -502,7 +545,7 @@ void handle_request(){
         //todo: change [25]
         char dir_path[50];
         char filename[50];
-        struct stat st = {0};      //?
+        struct stat st = {0};
 
         //get sender & receiver info
         s_id = recv_int(new_dev, false);
@@ -538,6 +581,8 @@ void handle_request(){
                 //*create a subdirectory for each receiver [offline]
 
             //all pending_msgs
+            //fix: mettere in una init, altrimenti ogni volta la ricrea
+            
             sprintf(dir_path, "./pending_messages");
             if(stat(dir_path, &st) == -1)
                 mkdir(dir_path, 0700);
@@ -550,19 +595,21 @@ void handle_request(){
             sprintf(filename, "%s/from_%d.txt", dir_path, s_id);
             printf("[server] Create file to save messages:\n\t%s\n", filename);
 
-            //fix: dont work like this
-            // FILE* fp;
-            // if((fp = fopen(filename, "w")) == NULL){
-            //     perror("[server] Error: fopen()");
-            //     exit(-1);
-            // }
-            // if((fp = fopen("prova.txt", "w")) == NULL){
-            //     perror("[server] Error: fopen()");
-            //     exit(-1);
-            // }
+            /*
+            FILE* fp;
+            if((fp = fopen(filename, "w")) == NULL){
+                perror("[server] Error: fopen()");
+                exit(-1);
+            }
+            if((fp = fopen("prova.txt", "w")) == NULL){
+                perror("[server] Error: fopen()");
+                exit(-1);
+            }
+            */
 
             //device is now running handle_chat_w_server() function
             while((recv_int(new_dev, false)) == OK_CODE){
+                pending_messages[s_id][r_id]++;
                 //todo: convert in send_msg (remove BUFFER_SIZE)
                 ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
                 //todo: make it invisible for server
@@ -657,8 +704,8 @@ int main(int argc, char** argv){
     my_port = p;
     create_listening_socket_tcp();
 
-    FILE *file;
-    if((file = fopen("network_status.txt", "r"))){
+    FILE *file = fopen("network_status.txt", "r");
+    if(file){
         //if file exists restore old status
         restore_network(file);
         fclose(file);
@@ -667,6 +714,11 @@ int main(int argc, char** argv){
         //first boot from server
         printf("[server] first boot: network is empty\n");
         n_conn = n_dev = 0;
+
+        //there are no pending messages at firts boot
+        for(int i=0; i<MAX_DEVICES; i++)
+            for(int j=0; j<MAX_DEVICES; j++)
+                pending_messages[i][j] = 0;
     }
 
     //Init set structure 
