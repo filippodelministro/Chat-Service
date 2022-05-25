@@ -350,7 +350,7 @@ void handle_chat(int sock) {
                     case OK_CODE:
                         //message: format message and send it
                         append_time(buffer, msg);
-                        //send in any case message: if command, inform other device=
+                        //send in any case message: if command, inform other device
                         //todo: convert in send_msg (remove BUFFER_SIZE)
                         for(int i=0; i<n_dev_chat; i++){
                             send(sock, buffer, BUFFER_SIZE, 0);
@@ -391,12 +391,9 @@ void handle_chat(int sock) {
                         break;
                     case SHARE_CODE:
                         //get filename and check if file exists
-
                         printf("[device] type <filename> to share\n");
-                        //fix: dont work: print it in file
                         system("ls");
                         scanf("%s", msg);
-
 
                         FILE *fp = fopen(msg, "r");
                         if(fp == NULL){
@@ -405,14 +402,14 @@ void handle_chat(int sock) {
                             break;
                         }
                         
-                        //file eixists: sending it
+                        //file exists: sending it
                         send_int(OK_CODE, sock);
                         
                         printf("[device] sending file...\n");
                         send_file(fp, sock);
+                        fclose(fp);
 
-                        // fclose(fp);
-                        printf("[device] shared file\n");
+                        printf("[device] file shared!\n");
                         break;
 
                     default:
@@ -471,19 +468,20 @@ void handle_chat(int sock) {
                         break;
                     
                     case SHARE_CODE:
-                        //create file to save file
+                        printf("[device] other device is sending you a file: wait...\n");
 
-                        printf("SHARE_CODE\n");
-
-                        //fix: dont work: print it in file
+                        //receive OK_CODE to start file transaction, than receive file
                         if((recv_int2(sock, true)) == ERR_CODE){
                             printf("[device] file transfer failed: sender error!\n");
                             break;
                         }
                         printf("[device] receiving file...\n");
                         recv_file(sock);
-
-                        printf("[device] received file\n");
+                        struct stat st;
+                        stat("recv.txt", &st);
+                        int size = st.st_size;
+                        
+                        printf("[device] received %d byte: check 'recv.txt'\n", size);
                         break;
                     
                     default:
