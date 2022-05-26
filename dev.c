@@ -188,7 +188,7 @@ void update_devices(){
 
     //send opcode to server and wait for ack
     send_opcode(UPDATE_OPCODE);
-    sleep(1);
+    // sleep(1);
 
     n_dev = recv_int(server.sd, false);
     for(int i=0; i<n_dev; i++){
@@ -492,7 +492,7 @@ void handle_chat(int sock) {
                         recv_msg(sock, type, true);
 
                         printf("[device] receiving %s file...\n", type);
-                        recv_file(sock, type);
+                        recv_file(sock, type, true);
                         struct stat st;
                         stat("recv.txt", &st);
                         int size = st.st_size;
@@ -738,33 +738,35 @@ void hanging_command(){
     //todo // authentication();
     sleep(1);
 
-    int n_pend_dev, msg_tot;
-    n_pend_dev = msg_tot = 0;
+    
 
     //get OK_CODE if there are pending_messages
     if((recv_int(server.sd, false)) == OK_CODE){
         //received messages
-        int s_id, msg_from_s_id;
-        char timer[TIMER_SIZE];
-        
+        int s_id, msg_from_s, n_sender, msg_tot;
+        s_id = msg_from_s = n_sender = msg_tot = 0;
+
         //for each sender receive sender_id and number of messages received
         printf("\tid\tusername\tn_messages\ttimer\t\n");
-            while((recv_int(server.sd, false)) == OK_CODE){
+        while((recv_int(server.sd, false)) == OK_CODE){
             s_id = recv_int(server.sd, false);               //sender_id
-            msg_from_s_id =  recv_int(server.sd, false);     //number of messages from sender
-            //todo: recv_msg(timer_last_msg);
-            sprintf(timer, "DA_FARE!");
-            msg_tot += msg_from_s_id;
-            n_pend_dev++;
+            msg_from_s = recv_int(server.sd, false);         //number of messages from sender   
 
-            printf("\t%d\t%s\t\t%d\t%s\n", s_id, devices[s_id].username, msg_from_s_id, timer);
+            char timer[TIMER_SIZE];
+            recv_msg(server.sd, timer, false);  //todo: change in msg_timer
+            
+            msg_tot += msg_from_s;
+            n_sender++;
+
+            printf("\t%d\t%s\t\t%d\t\t%s\n", s_id, devices[s_id].username, msg_from_s, timer);
 
             char type[WORD_SIZE] = {"txt"};
-            recv_file(server.sd, type);
+            recv_file(server.sd, type, false);
         }
 
-        printf("[device] received %d messages from %d different devices\n", msg_tot, n_pend_dev);
-        if(n_pend_dev >= n_dev){
+        printf("[device] received %d messages from %d different devices\n", msg_tot, n_sender);
+
+        if(n_sender >= n_dev){
             printf("[device] Error in pending_messages structure: closing program...\n");
             exit(-1);
         }

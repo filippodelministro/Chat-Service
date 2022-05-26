@@ -524,8 +524,12 @@ void handle_request(){
             if(pending_messages[i][id]){
                 send_int(OK_CODE, new_dev);
                 send_int(i, new_dev);
+                
+                int ret = pending_messages[i][id];
+                printf("ret: %d", ret);
                 send_int(pending_messages[i][id], new_dev);
-                //todo: send_msg(timer_last_msg);
+                //todo: change my_time with message_time
+                send_msg(my_time, new_dev);
 
                 char path[WORD_SIZE];
                 sprintf(path, "./pending_messages/device_%d/from_%d.txt", id, i);
@@ -627,6 +631,7 @@ void handle_request(){
                 //copy messages in a file
                 fprintf(fp, buffer);     //fix
             }
+            printf("s_id: %d\tr_id: %d\tn_msgs:  %d\n", s_id, r_id, pending_messages[s_id][r_id]);
             fclose(fp);                  //fix
         }
 

@@ -121,18 +121,19 @@ void prompt(){
     fflush(stdout);
 }
 
-void recv_file(int sd, char type[WORD_SIZE]){
-    printf("[recv_file] start\n");
+void recv_file(int sd, char type[WORD_SIZE], bool show){
+    if(show)
+        printf("[recv_file] start\n");
     FILE *fp;
     int n;
     char buffer[BUFFER_SIZE];
 
     char namefile[WORD_SIZE];
     sprintf(namefile, "recv.%s", type);
-    printf("%s\n", namefile);
+    if(show)
+        printf("%s\n", namefile);
 
     fp = fopen(namefile, "w");
-    printf("[recv_file] opened '%s'\n", namefile);
 
     while(true){
         int code = recv_int(sd, false);
@@ -142,7 +143,8 @@ void recv_file(int sd, char type[WORD_SIZE]){
             bzero(buffer, BUFFER_SIZE);
         }
         else{
-            printf("[recv_file] end\n");
+            if(show)
+                printf("[recv_file] end\n");
             fclose(fp);
             return;
         }
