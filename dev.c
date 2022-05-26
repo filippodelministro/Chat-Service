@@ -701,6 +701,7 @@ void in_command(){
     }
 
     create_listening_socket_tcp();
+    update_devices();
 
     //complete: device is now online
     my_device.connected = true;
@@ -729,7 +730,6 @@ void list_command(){
 }
 
 void hanging_command(){
-    printf("HANGING TASK START\n");
 
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -738,28 +738,37 @@ void hanging_command(){
     //todo // authentication();
     sleep(1);
 
-    //get preliminar info
-    // int n_pend_msg = recv_int(server.sd, false);
-    // int n_pend_dev = recv_int(server.sd, false);
+    int n_pend_dev, msg_tot;
+    n_pend_dev = msg_tot = 0;
 
-    while(recv_int(server.sd, true) == OK_CODE){
-        recv_int(server.sd, true);  //sender_id
-        recv_int(server.sd, true);  //# of messages from sender
+    //get OK_CODE if there are pending_messages
+    if((recv_int(server.sd, false)) == OK_CODE){
+        //received messages
+        int s_id, msg_from_s_id;
+        
+        //for each sender receive sender_id and number of messages received
+        printf("\tid\tusername\tn_messages\t\n");
+            while((recv_int(server.sd, false)) == OK_CODE){
+            s_id = recv_int(server.sd, false);               //sender_id
+            msg_from_s_id =  recv_int(server.sd, false);     //number of messages from sender
+            msg_tot += msg_from_s_id;
+            n_pend_dev++;
+
+            printf("\t%d\t%s\t\t%d\n", s_id, devices[s_id].username, msg_from_s_id);
+        }
+
+        printf("[device] received %d messages from %d different devices\n", msg_tot, n_pend_dev);
+        if(n_pend_dev >= n_dev){
+            printf("[device] Error in pending_messages structure: closing program...\n");
+            exit(-1);
+        }
     }
-
-    // if(!n_pend_msg){
-    //     printf("[device] any messages received\n");
-    //     goto hanging_end;
-    // }
-
-    //if here there are pending messages
-    printf("[device] received %d messages from %d different devices\n", n_pend_msg, n_pend_dev);
-
-
+    else
+        printf("[device] there are no pending messages\n");
 
 
     hanging_end:
-    printf("COMANDO HANGING ESEGUITO \n");
+    printf("HANGING TASK COMPLETED\n");
     close(server.sd);
 }
 
@@ -771,7 +780,7 @@ void show_command(){
     sleep(1);
     // send_int(my_device.id, server);
 
-    printf("COMANDO SHOW ESEGUITO \n");
+    printf("SHOW TASK COMPLETED\n");
     prompt();
     close(server.sd);
 }
@@ -859,7 +868,7 @@ void share_command(){
     send_file(fp, r_sd);
 
     fclose(fp);
-    printf("CHAT TASK COMPLETED\n");
+    printf("SHARE TASK COMPLETED\n");
 }
 
 void out_command(){

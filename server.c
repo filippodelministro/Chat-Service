@@ -509,9 +509,15 @@ void handle_request(){
         //      [...]
         //
 
-        //sending premilimar info
-        // send_int(n_pend_msg, new_dev);
-        // send_int(n_pend_msg, new_dev);
+        //check if there are pending messages and send OK_CODE or ERR_CODE
+        int code = ERR_CODE;
+        for(int i=0; i<MAX_DEVICES; i++){
+            if(pending_messages[i][id]){
+                code = OK_CODE;
+                break;
+            }
+        }
+        send_int(code, new_dev);
 
         //sending for each device: OK_CODE | sender_id | number of message from sender
         for(int i=0; i<MAX_DEVICES; i++){
@@ -520,7 +526,8 @@ void handle_request(){
                 send_int(i, new_dev);
                 send_int(pending_messages[i][id], new_dev);
             }
-        }       
+        }    
+        send_int(ERR_CODE, new_dev);   
 
         // int pend_dev[n_pend_dev];
 
