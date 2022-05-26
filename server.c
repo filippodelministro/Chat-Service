@@ -102,9 +102,19 @@ void esc_command(){
             send_int(ESC_OPCODE, sd);
         }
     }
-
     fclose(fp);
     printf("[server] created 'network_status.txt'\n");
+    
+    //save pending_messages matrix (files are already saved in ./pending_messages/...)
+    fp = fopen("pending_messages.txt", "w");
+    for(int i=0; i<MAX_DEVICES; i++){
+        for(int j=0; j<MAX_DEVICES; j++){
+            fprintf(fp, "%d ", pending_messages[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+
     printf("[server] send ESC_OPCODE to other devices\n[server] closing...\n");
     exit(0);
 }
@@ -398,9 +408,31 @@ void restore_network(FILE* fp){
         }
         else
             d->connected = false;
-    }
-    
+    }    
     printf("\n[restore_network] got devices info\n");
+    list_command();
+
+    //fix: restore pending_messages matrix (la stampa bene quindi c'è solo da leggerla)
+    /*
+    fp = fopen("pending_messages.txt", "r");
+    printf("\n[restore_network] opened 'pending_messages.txt'\n");
+    for(int i=0; i<MAX_DEVICES; i++){
+        for(int j=0; j<MAX_DEVICES; j++){
+            fscanf(fp, "%d", pending_messages[i][j]);
+        }
+    }
+    fclose(fp);
+    
+    printf("\nGOT MATRIX\n");
+    for(int i=0; i<MAX_DEVICES; i++){
+        for(int j=0; j<MAX_DEVICES; j++){
+            printf("%d ", pending_messages[i][j]);
+        }
+        printf("\n");
+    }
+    */
+
+    printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
 /*
@@ -538,8 +570,9 @@ void handle_request(){
                     printf("[server] hanging_cmd: pend_msgs file not exists!\n");
                 send_file(fp, new_dev);
                 fclose(fp);
-                
-                //todo system("rm path");
+
+                //once send delete the pending_message file
+                remove(path);   
             }
         }    
         send_int(ERR_CODE, new_dev);    //sending end of pend_msgs

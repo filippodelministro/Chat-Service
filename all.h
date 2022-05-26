@@ -18,7 +18,7 @@
 #define WORD_SIZE           1024
 #define TIMER_SIZE          8
 
-#define MAX_DEVICES         100    
+#define MAX_DEVICES         25    
 
 #define SIGNUP_OPCODE       0
 #define IN_OPCODE           1

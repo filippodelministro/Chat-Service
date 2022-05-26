@@ -15,7 +15,7 @@ struct device{
     int id;
     char* username;
     char* password;
-    bool connected;         //true if chat already open
+    bool connected;             //true if chat already open
     
     //not needed for device purpouse
     ////bool registred;
@@ -762,6 +762,15 @@ void hanging_command(){
 
             char type[WORD_SIZE] = {"txt"};
             recv_file(server.sd, type, false);
+            
+            //rename file to handle multiple file
+            char path[15];
+            char new_name[10];
+            sprintf(new_name, "from_%d.txt", my_device.id, s_id);
+
+            printf("%s", new_name);
+            rename("recv.txt", new_name);
+            
         }
 
         printf("[device] received %d messages from %d different devices\n", msg_tot, n_sender);
