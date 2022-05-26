@@ -7,7 +7,7 @@
 
 //-----------     SERVER    -----------------
 int my_port;
-char my_time[8];
+char my_time[TIMER_SIZE];
 struct sockaddr_in my_addr;
 
 //-----------     DEVICES    -----------------
@@ -17,7 +17,7 @@ struct device{
     struct sockaddr_in addr;
     bool connected;
 
-    char time[8];
+    char time[TIMER_SIZE];
     int id;
     char* username;
     char* password;
@@ -504,7 +504,7 @@ void handle_request(){
 
         id = recv_int(new_dev, false);
         
-        //todo: handle
+        //todo: auth
         // if(!authentication(id, new_dev))
         //      [...]
         //
@@ -525,15 +525,20 @@ void handle_request(){
                 send_int(OK_CODE, new_dev);
                 send_int(i, new_dev);
                 send_int(pending_messages[i][id], new_dev);
+                //todo: send_msg(timer_last_msg);
+
+                char path[WORD_SIZE];
+                sprintf(path, "./pending_messages/device_%d/from_%d.txt", id, i);
+                FILE* fp = fopen(path, "r");
+                if(!fp)
+                    printf("[server] hanging_cmd: pend_msgs file not exists!\n");
+                send_file(fp, new_dev);
+                fclose(fp);
+                
+                //todo system("rm path");
             }
         }    
-        send_int(ERR_CODE, new_dev);   
-
-        // int pend_dev[n_pend_dev];
-
-        // char path[WORD_SIZE];
-        // sprintf(path, "./pending_messages/device_%d", id);
-        // FILE* fp = fopen("");
+        send_int(ERR_CODE, new_dev);    //sending end of pend_msgs
 
         close(new_dev);
         prompt();
@@ -590,7 +595,7 @@ void handle_request(){
                 //*create a subdirectory for each receiver [offline]
 
             //all pending_msgs
-            //fix: mettere in una init, altrimenti ogni volta la ricrea
+            //fix: mettere in una init, altrimenti ogni volta la ricrea ??
             
             sprintf(dir_path, "./pending_messages");
             if(stat(dir_path, &st) == -1)
@@ -604,17 +609,11 @@ void handle_request(){
             sprintf(filename, "%s/from_%d.txt", dir_path, s_id);
             printf("[server] Create file to save messages:\n\t%s\n", filename);
 
-            /*
             FILE* fp;
-            if((fp = fopen(filename, "w")) == NULL){
+            if((fp = fopen(filename, "a")) == NULL){
                 perror("[server] Error: fopen()");
                 exit(-1);
             }
-            if((fp = fopen("prova.txt", "w")) == NULL){
-                perror("[server] Error: fopen()");
-                exit(-1);
-            }
-            */
 
             //device is now running handle_chat_w_server() function
             while((recv_int(new_dev, false)) == OK_CODE){
@@ -626,9 +625,9 @@ void handle_request(){
                 printf("%s", buffer);
                 
                 //copy messages in a file
-                // fprintf(fp, buffer);     //fix
+                fprintf(fp, buffer);     //fix
             }
-            // fclose(fp);                  //fix
+            fclose(fp);                  //fix
         }
 
     chat_end:

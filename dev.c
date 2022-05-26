@@ -745,16 +745,22 @@ void hanging_command(){
     if((recv_int(server.sd, false)) == OK_CODE){
         //received messages
         int s_id, msg_from_s_id;
+        char timer[TIMER_SIZE];
         
         //for each sender receive sender_id and number of messages received
-        printf("\tid\tusername\tn_messages\t\n");
+        printf("\tid\tusername\tn_messages\ttimer\t\n");
             while((recv_int(server.sd, false)) == OK_CODE){
             s_id = recv_int(server.sd, false);               //sender_id
             msg_from_s_id =  recv_int(server.sd, false);     //number of messages from sender
+            //todo: recv_msg(timer_last_msg);
+            sprintf(timer, "DA_FARE!");
             msg_tot += msg_from_s_id;
             n_pend_dev++;
 
-            printf("\t%d\t%s\t\t%d\n", s_id, devices[s_id].username, msg_from_s_id);
+            printf("\t%d\t%s\t\t%d\t%s\n", s_id, devices[s_id].username, msg_from_s_id, timer);
+
+            char type[WORD_SIZE] = {"txt"};
+            recv_file(server.sd, type);
         }
 
         printf("[device] received %d messages from %d different devices\n", msg_tot, n_pend_dev);
