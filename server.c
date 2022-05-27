@@ -555,13 +555,11 @@ void handle_request(){
         for(int i=0; i<MAX_DEVICES; i++){
             if(pending_messages[i][id]){
                 send_int(OK_CODE, new_dev);
-                send_int(i, new_dev);
-                
-                int ret = pending_messages[i][id];
-                printf("ret: %d", ret);
-                send_int(pending_messages[i][id], new_dev);
+
                 //todo: change my_time with message_time
-                send_msg(my_time, new_dev);
+                send_msg(my_time, new_dev);                     //timer                
+                send_int(i, new_dev);                           //sender_id
+                send_int(pending_messages[i][id], new_dev);     //number of messages from sender_id
 
                 char path[WORD_SIZE];
                 sprintf(path, "./pending_messages/device_%d/from_%d.txt", id, i);

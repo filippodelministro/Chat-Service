@@ -749,12 +749,11 @@ void hanging_command(){
         //for each sender receive sender_id and number of messages received
         printf("\tid\tusername\tn_messages\ttimer\t\n");
         while((recv_int(server.sd, false)) == OK_CODE){
+            char timer[TIMER_SIZE];
+            recv_msg(server.sd, timer, false);  //todo: change in msg_timer
             s_id = recv_int(server.sd, false);               //sender_id
             msg_from_s = recv_int(server.sd, false);         //number of messages from sender   
 
-            char timer[TIMER_SIZE];
-            recv_msg(server.sd, timer, false);  //todo: change in msg_timer
-            
             msg_tot += msg_from_s;
             n_sender++;
 
@@ -766,14 +765,13 @@ void hanging_command(){
             //rename file to handle multiple file
             char path[15];
             char new_name[10];
-            sprintf(new_name, "from_%d.txt", my_device.id, s_id);
+            sprintf(new_name, "from_%d.txt", s_id);
 
-            printf("%s", new_name);
             rename("recv.txt", new_name);
-            
+            printf("[device] saved in file %s\n", new_name);
         }
 
-        printf("[device] received %d messages from %d different devices\n", msg_tot, n_sender);
+        printf("\n[device] received %d messages from %d different devices\n", msg_tot, n_sender);
 
         if(n_sender >= n_dev){
             printf("[device] Error in pending_messages structure: closing program...\n");
