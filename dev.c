@@ -225,11 +225,14 @@ int find_device(const char* usr){
     return -1;      //not found
 }
 
-int authentication(){    
+bool authentication(){    
     //send username & password to server to authenticate
     send_msg(my_device.username, server.sd);
     send_msg(my_device.password, server.sd);
-    return recv_int(server.sd, false);
+    if(recv_int(server.sd, false) == OK_CODE)
+        return true;
+    else
+        return false;
 }
 
 //*manage chats
@@ -536,6 +539,7 @@ void handle_request(){
             break;
 
         case SHOW_OPCODE:
+
             int r_id = recv_int(server.sd, false);
             printf("[device] user '%s' has now read your messages!\n", devices[r_id].username);
             break;
@@ -716,7 +720,10 @@ void hanging_command(){
     create_srv_socket_tcp(server.port);
     send_opcode(HANGING_OPCODE);
     send_int(my_device.id, server.sd);
-    //todo // authentication();
+    if(!authentication()){
+        printf("[device] hanging_command: authentication failed!\n");
+        return;
+    }
     sleep(1);
 
     //get OK_CODE if there are pending_messages
@@ -807,6 +814,10 @@ void show_command(){
     //notifying server that show_command has been executed
     create_srv_socket_tcp(server.port);
     send_opcode(SHOW_OPCODE);
+    if(!authentication()){
+        printf("[device] show_command: authentication failed!\n");
+        return;
+    }
     sleep(1);
 
     send_int(my_device.id, server.sd);
@@ -906,28 +917,20 @@ void share_command(){
 */
 
 void out_command(){
+    //first handshake
     create_srv_socket_tcp(server.port);
-
     send_opcode(OUT_OPCODE);
+    send_int(my_device.id, server.sd);
+    if(!authentication()){
+        printf("[device] out_command: authentication failed!\n");
+        return;
+    }
     sleep(1);
+    
+    printf("[device] You are now offline!\n");
 
     close(listening_socket);
     FD_CLR(listening_socket, &master);
-
-    //send dev_id to server
-    send_int(my_device.id, server.sd);
-    //sending username & password for autentication
-    //fix: use authentication()
-    send_msg(my_device.username, server.sd);
-    send_msg(my_device.password, server.sd);
-    
-    //wait OK_CODE from server to safe disconnect
-    if(recv_int(server.sd, false) == OK_CODE){
-        my_device.connected = false;    
-        printf("[device] You are now offline!\n");
-    }
-    else printf("[device] out_command: Error! Device not online!\n");
-
     close(server.sd);
 }
 

@@ -397,7 +397,7 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
-/*
+
 bool authentication(int id, int sock){
     char usr[WORD_SIZE];
     char pswd[WORD_SIZE];
@@ -409,16 +409,18 @@ bool authentication(int id, int sock){
     //check if info are correct
     if(strcmp(usr, devices[id].username)){
         printf("[authentication] Error: username is not correct!\n");
+        send_int(ERR_CODE, sock);
         return false;
     }
     if(strcmp(pswd, devices[id].password)){
         printf("[authentication] Error: pswd is not correct!\n");
+        send_int(ERR_CODE, sock);
         return false;
     }
-
+    send_int(OK_CODE, sock);
+    printf("[authentication] success!\n");
     return true;
 }
-*/
 //* //////////////////////////////////////////////////////////////////////
 
 //prende opcode dal device (recv), poi lo fa gestire da un 
@@ -510,10 +512,10 @@ void handle_request(){
         //sending logged off receiver his pending messages from other devices
         id = recv_int(new_dev, false);
         
-        //todo: auth
-        // if(!authentication(id, new_dev))
-        //      [...]
-        //
+        if(!authentication(id, new_dev)){
+            printf("[server] hanging branch: authentication failed!\n");
+            return;
+        }
 
         //check if there are pending messages and send OK_CODE or ERR_CODE
         ret = ERR_CODE;
@@ -557,11 +559,16 @@ void handle_request(){
         break;
 
     case SHOW_OPCODE:
+        //first handshake
+        if(!authentication(id, new_dev)){
+            printf("[server] show branch: authentication failed!\n");
+            return;
+        }
+        
         //receiver just read pending_messages from device sender
         //get sender & receiver info about pending_messages
         r_id = recv_int(new_dev, false);
         s_id = recv_int(new_dev, false);
-        //todo auth
 
         //if OK_CODE show_cmd worked for receiver
         ret = recv_int(new_dev, false);
@@ -679,24 +686,14 @@ void handle_request(){
     case OUT_OPCODE:
         //get id from device
         id = recv_int(new_dev, false);
-        printf("id ricevuto: %d\n", id);
-        d = &devices[id];
 
-        printf("[server] authentication for user %d\n", id);
-
-        //get username & password for autentication
-        recv_msg(new_dev, username, false);
-        recv_msg(new_dev, password, false);
-        if(strcmp(d->username, username) || strcmp(d->password, password)){
-            printf("[server] authentication failed: OUT not safe!\n");
-            send_int(ERR_CODE, new_dev);
+        if(!authentication(id, new_dev)){
+            printf("[server] out branch: authentication failed!\n");
             return;
         }
-
-        //send ACK to safe disconnect
-        send_int(OK_CODE, new_dev);            
         
         //update device info
+        d = &devices[id];
         d->pend_dev_before_logout = d->pend_dev;
         d->connected = false;
         n_conn--;
