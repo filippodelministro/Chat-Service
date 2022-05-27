@@ -570,7 +570,7 @@ void handle_request(){
                 fclose(fp);
 
                 //once send delete the pending_message file
-                remove(path);   
+                remove(path);
             }
         }    
         send_int(ERR_CODE, new_dev);    //sending end of pend_msgs

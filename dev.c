@@ -738,8 +738,6 @@ void hanging_command(){
     //todo // authentication();
     sleep(1);
 
-    
-
     //get OK_CODE if there are pending_messages
     if((recv_int(server.sd, false)) == OK_CODE){
         //received messages
@@ -759,16 +757,25 @@ void hanging_command(){
 
             printf("\t%d\t%s\t\t%d\t\t%s\n", s_id, devices[s_id].username, msg_from_s, timer);
 
+            //receive file with pending_messages
             char type[WORD_SIZE] = {"txt"};
             recv_file(server.sd, type, false);
             
+            /*
+            //check if device_ID directory exists: eventually create it
+            char new_path[9];
+            sprintf(new_path, "device_%d", my_device.id);
+            DIR* dir = opendir(new_path);
+            if(!dir)
+                mkdir(new_path, 0700);
+            */
+
             //rename file to handle multiple file
-            char path[15];
             char new_name[10];
-            sprintf(new_name, "from_%d.txt", s_id);
+            sprintf(new_name, "%d_from_%d.txt", my_device.id, s_id);
 
             rename("recv.txt", new_name);
-            printf("[device] saved in file %s\n", new_name);
+            printf("[device] saved in %s\n", new_name);
         }
 
         printf("\n[device] received %d messages from %d different devices\n", msg_tot, n_sender);

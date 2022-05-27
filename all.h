@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
+#include <dirent.h>
 
 #define BUFFER_SIZE         4096
 #define COMMAND_LENGHT      1024
