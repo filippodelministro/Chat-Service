@@ -311,6 +311,7 @@ void handle_chat_w_server(){
     }
 }
 
+void list_command();
 void handle_chat(int sock) {
     int code, ret, i;
     char msg[BUFFER_SIZE];          //message to send
@@ -551,7 +552,7 @@ void handle_request(){
     //received request from device
     update_devices();
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
-    // printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
+    printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
 
@@ -560,7 +561,7 @@ void handle_request(){
     
     handle_chat(s_sd);
     close(s_sd);
-    // n_dev_chat = 0;
+    n_dev_chat = 0;
 }
 
 //What a device user can use to interact with device
@@ -855,10 +856,10 @@ void chat_command(){
         //handshake with receiver
         send_int(my_device.id, r_sd);
 
-        // n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
+        n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
         handle_chat(r_sd);
         close(r_sd);
-        // n_dev_chat = 0;
+        n_dev_chat = 0;
     }
 
     chat_end:
