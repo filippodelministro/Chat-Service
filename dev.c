@@ -24,6 +24,7 @@ struct device{
 
     //chat info
     int pend_msg;
+    bool hanging_done;
 }devices[MAX_DEVICES];
 
 struct device my_device;
@@ -166,11 +167,11 @@ void dev_init(int id, const char* usr, const char* pswd){
     struct device* d = &my_device;
 
     d->id = id;
+    d->hanging_done = false;
     d->username = malloc(sizeof(usr));
     d->password = malloc(sizeof(pswd));
     strcpy(d->username, usr);
     strcpy(d->password, pswd);
-
     printf("[device] dev_init: You are now registered!\n"
                     "\t dev_id: %u \n"
                     "\t username: %s \n"
@@ -287,8 +288,7 @@ void handle_chat_w_server(){
         switch (code){
         case OK_CODE:
             append_time(buffer, msg);
-            //todo: convert in send_msg (remove BUFFER_SIZE)
-            send(server.sd, buffer, BUFFER_SIZE, 0);
+            send_msg(buffer, server.sd);
             break;
 
         case QUIT_CODE:
@@ -508,15 +508,13 @@ void handle_chat(int sock) {
 }
 
 void handle_request(){
-    printf("\n[handle_request]\n");
-
     int s_sd, s_id, s_port;
     char s_username[BUFFER_SIZE];
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
     
-    printf("[handle_request] accepted\n");
+    printf("[handle_request] accepted request\n");
 
     //receive sender info: can be server [ERR_CODE] or a device [ID]
     s_id = recv_int(s_sd, false);
@@ -556,7 +554,6 @@ void handle_request(){
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
 
-    //fix: waiting
     sleep(1);
     
     handle_chat(s_sd);
@@ -685,6 +682,7 @@ void in_command(){
     
     //complete: device is now online
     my_device.connected = true;
+    my_device.hanging_done = false;
     printf("[device] You are now online!\n");
 
     close(server.sd);
@@ -709,6 +707,10 @@ void list_command(){
 }
 
 void hanging_command(){
+    if(my_device.hanging_done){
+        printf("[device] 'hanging' already executed since last logoff\n");
+        goto hanging_end;
+    }
 
     //first handshake
     create_srv_socket_tcp(server.port);
@@ -759,6 +761,7 @@ void hanging_command(){
         printf("[device] there are no pending messages\n");
 
     hanging_end:
+    my_device.hanging_done = true;
     printf("HANGING TASK COMPLETED\n");
     close(server.sd);
 }
@@ -812,7 +815,6 @@ void show_command(){
 
     show_end:
     printf("SHOW TASK COMPLETED\n");
-    prompt();
     close(server.sd);
 }
 

@@ -507,8 +507,7 @@ void handle_request(){
         break;
 
     case HANGING_OPCODE:
-        printf("HANGING BRANCH!\n");
-
+        //sending logged off receiver his pending messages from other devices
         id = recv_int(new_dev, false);
         
         //todo: auth
@@ -539,8 +538,11 @@ void handle_request(){
                 char path[WORD_SIZE];
                 sprintf(path, "./pending_messages/device_%d/from_%d.txt", id, i);
                 FILE* fp = fopen(path, "r");
-                if(!fp)
+                if(!fp){
                     printf("[server] hanging_cmd: pend_msgs file not exists!\n");
+                    return;
+                }
+
                 send_file(fp, new_dev);
                 fclose(fp);
 
@@ -555,22 +557,20 @@ void handle_request(){
         break;
 
     case SHOW_OPCODE:
-        printf("SHOW BRANCH!\n");
-        //device receiver just read pending_messages from device sender
-
+        //receiver just read pending_messages from device sender
         //get sender & receiver info about pending_messages
-        r_id = recv_int(new_dev, true);
-        s_id = recv_int(new_dev, true);
+        r_id = recv_int(new_dev, false);
+        s_id = recv_int(new_dev, false);
         //todo auth
 
         //if OK_CODE show_cmd worked for receiver
-        ret = recv_int(new_dev, true);
+        ret = recv_int(new_dev, false);
         if(ret == OK_CODE){
-            printf("pend_msg: %d\n", pending_messages[s_id][r_id]);
+            printf("[server] sending %d messages from '%s' to '%s'\n", pending_messages[s_id][r_id], devices[s_id].username, devices[r_id].username);
             pending_messages[s_id][r_id] = 0;
             
             if(devices[s_id].connected){
-                //inform sender that receiver read pending_messages
+                //inform sender that receiver has read pending_messages
                 sd = create_chat_socket(s_id);
                 send_int(ERR_CODE, sd);
 
@@ -579,7 +579,7 @@ void handle_request(){
                 close(sd);
             }
             else{
-                //handled in IN_BRANCH at sender next login
+                //handled in IN_OPCODE branch (at sender's next login)
                 devices[s_id].pend_dev--;
             }
         }
@@ -625,7 +625,7 @@ void handle_request(){
         }
         else{
             //request device is offline: server manage chat with new_dev  
-            printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
+            printf("[server] '%s' is offline: getting messages from '%s'!\n", r_username, s_username);
             devices[s_id].pend_dev++;
             
             //*check if directory already exists before create;
@@ -655,18 +655,14 @@ void handle_request(){
 
             //device is now running handle_chat_w_server() function
             while((recv_int(new_dev, false)) == OK_CODE){
+                recv_msg(new_dev, buffer, false);
                 pending_messages[s_id][r_id]++;
-                //todo: convert in send_msg (remove BUFFER_SIZE)
-                ret = recv(new_dev, (void*)buffer, BUFFER_SIZE, 0);
-                //todo: make it invisible for server
-                //todo: save messages in a file for receiver
-                printf("%s", buffer);
                 
                 //copy messages in a file
-                fprintf(fp, buffer);     //fix
+                fprintf(fp, buffer);     
             }
-            printf("s_id: %d\tr_id: %d\tn_msgs:  %d\n", s_id, r_id, pending_messages[s_id][r_id]);
-            fclose(fp);                  //fix
+            printf("\ts_id: %d\tr_id: %d\tn_msgs:  %d\n", s_id, r_id, pending_messages[s_id][r_id]);
+            fclose(fp);                  
         }
 
     chat_end:

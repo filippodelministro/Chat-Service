@@ -14,7 +14,7 @@ server: server.o
 reset: 
 	rm *o dev server
 	rm *txt
-	rmdir -r pending_messages
+	rmdir --ignore-fail-on-non-empty 'pending_messages'
 
 gdb:
 	gcc -g -Wall dev.c -o dev
