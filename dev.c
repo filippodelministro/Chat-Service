@@ -223,31 +223,15 @@ int find_device(const char* usr){
     }
     return -1;      //not found
 }
-/*
-int find_device_from_socket(int sd){
-    int i;
 
-    // printf("[server] find_device_from_skt: looking for %d in %d devices connected...\n", sd, n_conn);
-    for(i=0; i<MAX_DEVICES; i++){
-        struct device *d = &devices[i];
-        
-        if(d->sd == sd && d->connected)
-            return i;    
-    }
-
-    return -1;      //not found
-}
-*/
-
-void authentication(){    
+int authentication(){    
     //send username & password to server to authenticate
     send_msg(my_device.username, server.sd);
     send_msg(my_device.password, server.sd);
+    return recv_int(server.sd, false);
 }
 
-
 //*manage chats
-void list_command();
 int check_chat_command(char* cmd){
     char user[WORD_SIZE];
 
@@ -522,7 +506,6 @@ void handle_chat(int sock) {
     }
 }
 
-
 void handle_request(){
     printf("\n[handle_request]\n");
 
@@ -568,23 +551,16 @@ void handle_request(){
     //received request from device
     update_devices();
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
-    printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
+    // printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
 
     //fix: waiting
     sleep(1);
-    /*
-    for(int i=3; i>0; i--){
-        printf("[device] Chat starting in %d seconds...\r", i);
-        sleep(1);
-    }
-    */
     
     handle_chat(s_sd);
     close(s_sd);
-    n_dev_chat = 0;
-    // return;
+    // n_dev_chat = 0;
 }
 
 //What a device user can use to interact with device
@@ -596,20 +572,17 @@ void handle_request(){
 void help_command(){
 	printf( "Type a command:\n"
             "1) list         --> show registered users\n"
-            "2) hanging      --> receive old messages\n"
+            "2) hanging      --> receive pending messages\n"
             "3) show <user>  --> show pending messages from <user>\n"
             "4) chat <user>  --> open chat with <user>\n"
-            "5) share <user> --> share file with <user>??\n"
-            "6) out          --> logout\n"
+            "5) out          --> logout\n"
     );
 }
 
 void signup_command(){
-
-    char port[WORD_SIZE];
+    char port[WORD_SIZE];       //fix ?
     char username[WORD_SIZE];
     char password[WORD_SIZE];
-    char buffer[BUFFER_SIZE];
 
     //get data from stdin
     printf("[device] signup_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
@@ -643,24 +616,20 @@ void signup_command(){
     if(dev_id == ERR_CODE){
         printf("[device] Error in signup: username '%s' not available!\n", username);
         close(server.sd);
-        exit(-1);
         return;
     }
 
     //update device structure with dev_id get from server
     dev_init(dev_id, username, password);
 
-    memset(buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
 void in_command(){
 
-    char srv_port[WORD_SIZE];
+    char srv_port[WORD_SIZE];   //fix: come in signup
     char username[WORD_SIZE];
     char password[WORD_SIZE];
-    char buffer[BUFFER_SIZE];
-    memset(buffer, 0, sizeof(buffer));
 
     //get data from stdin
     printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
@@ -717,7 +686,6 @@ void in_command(){
     my_device.connected = true;
     printf("[device] You are now online!\n");
 
-    memset(&buffer, 0, sizeof(buffer));
     close(server.sd);
 }
 
@@ -764,23 +732,12 @@ void hanging_command(){
 
             msg_tot += msg_from_s;
             n_sender++;
-
             printf("\t%d\t%s\t\t%d\t\t%s\n", s_id, devices[s_id].username, msg_from_s, timer);
 
             //receive file with pending_messages
             char type[WORD_SIZE] = {"txt"};
             recv_file(server.sd, type, false);
-            
-            //!remove
-            /*
-            //check if device_ID directory exists: eventually create it
-            char new_path[9];
-            sprintf(new_path, "device_%d", my_device.id);
-            DIR* dir = opendir(new_path);
-            if(!dir)
-                mkdir(new_path, 0700);
-            */
-
+        
             //rename file to handle multiple file
             char new_name[10];
             sprintf(new_name, "%d_from_%d.txt", my_device.id, s_id);
@@ -791,6 +748,7 @@ void hanging_command(){
 
         printf("\n[device] received %d messages from %d different devices\n", msg_tot, n_sender);
 
+        //extra check
         if(n_sender >= n_dev){
             printf("[device] Error in pending_messages structure: closing program...\n");
             exit(-1);
@@ -798,7 +756,6 @@ void hanging_command(){
     }
     else
         printf("[device] there are no pending messages\n");
-
 
     hanging_end:
     printf("HANGING TASK COMPLETED\n");
@@ -814,7 +771,7 @@ void show_command(){
 
     //check to avoid self-show
     if(!strcmp(s_username, my_device.username)){
-        printf("[device] Error: showing messages from yourself");
+        printf("[device] Error: showing messages from yourself\n");
 	    return;
     } 
 
@@ -836,7 +793,7 @@ void show_command(){
         while(fgets(buff, sizeof(buff), fp))
             printf("%s", buff);
             remove(filename);
-            printf("[device] removed file %s", filename);
+            printf("[device] removed file %s\n", filename);
     }   
     else{
         printf("[device] there are no pending_messages: try <hanging> before!\n");
@@ -864,13 +821,13 @@ void chat_command(){
     scanf("%s", r_username);
 
     //check to avoid self-chat
-    if(strcmp(r_username, my_device.username) == 0){
-        printf("[device] Error: chatting with yourself");
+    if(!strcmp(r_username, my_device.username)){
+        printf("[device] Error: chatting with yourself\n");
 	    return;
     } 
 
+    //check if receiver exists
     update_devices();
-
     r_id = find_device(r_username);
     if(r_id == -1){
         printf("[device] user '%s' does not exists: try one of below...\n", r_username);
@@ -898,10 +855,10 @@ void chat_command(){
         //handshake with receiver
         send_int(my_device.id, r_sd);
 
-        n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
+        // n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
         handle_chat(r_sd);
         close(r_sd);
-        n_dev_chat = 0;
+        // n_dev_chat = 0;
     }
 
     chat_end:
@@ -909,7 +866,7 @@ void chat_command(){
     close(server.sd);
 }
 
-
+/*
 void share_command(){
     int r_id, r_sd;
     char filename[WORD_SIZE];
@@ -943,7 +900,7 @@ void share_command(){
     fclose(fp);
     printf("SHARE TASK COMPLETED\n");
 }
-
+*/
 
 void out_command(){
     create_srv_socket_tcp(server.port);
@@ -1017,8 +974,8 @@ void read_command(){
 		show_command();
     else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
-	else if (!strncmp(cmd, "share", 5) && my_device.connected)	
-        share_command();
+	// else if (!strncmp(cmd, "share", 5) && my_device.connected)	
+    //     share_command();
     else if (!strncmp(cmd, "out", 3) && my_device.connected)
         out_command();
 
@@ -1032,9 +989,6 @@ void read_command(){
 
 //* ///////////////////////////////////////////////////////////////////////
 //*                                 MAIN                                ///
-//* ///////////////////////////////////////////////////////////////////////
-
-//* ///////////////////////////////////////////////////////////////////////
 //* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char* argv[]){
@@ -1053,7 +1007,7 @@ int main(int argc, char* argv[]){
     server.connected = true;
     n_dev = n_dev_chat = 0;
 
-   //Initialise set structure 
+   //init set structure 
 	fdt_init();
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;

@@ -97,7 +97,7 @@ void esc_command(){
             d->password,
             d->time,    
             d->port,
-            d->pend_dev_before_logout, d->pend_dev
+           d->pend_dev_before_logout, d->pend_dev
         );
 
         if(d->connected){
@@ -136,33 +136,6 @@ void check_command(){
             devices[i].connected = false;
     }
 }
-
-
-/*
-void print_command(){
-    int i;
-
-    FILE* fp_f = fopen("f_network_status.txt", "w+");
-    //todo: add server timer
-    fprintf(fp_f, "[server] %u devices registered, %d connected at *TIMER*>\n\n", n_dev, n_conn);
-    fputs("+---------------------------------------------------+\n", fp_f);
-    fputs("|ID\tUSERNAME\t\tPASSWORD\t\tTIMESTAMP\tPORT|\n", fp_f);
-    fputs("+---------------------------------------------------+\n", fp_f);
-
-    for(i=0; i<n_dev; i++){
-        struct device* d = &devices[i];
-        if(d->connected){
-            fprintf(fp_f, "|%d\t%s\t\t\t%s\t\t\t%s\t%d\t|\n",
-                d->id, d->username,
-                d->password,
-                d->time,    
-                d->port
-            );
-        }
-    }
-    fclose(fp_f);
-}
-*/
 
 //* ///////////////////////////////////////////////////////////////////////
 //*                              UTILITY                                ///
@@ -220,19 +193,6 @@ int find_device(const char* usr){
         struct device *d = &devices[i];
         
         if(!strcmp(d->username, usr))
-            return i;    
-    }
-    return -1;      //not found
-}
-//fix: inutile??
-int find_device_from_port(int port){
-    int i;
-
-    printf("[server] find_device_from_port: looking for port '%d'...\n", port);
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(d->port == port && d->connected)
             return i;    
     }
     return -1;      //not found
