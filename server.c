@@ -378,7 +378,7 @@ void restore_network(FILE* fp){
     n_conn = 0;
 
     //get devices info in following format: |#id usr pswd HH:MM:SS #port|
-    char buff[4096];
+    char buff[BUFFER_SIZE];
     for(int i=0; i<n_dev; i++){
         struct device* d = &devices[i];
         fgets(buff, sizeof(buff), fp);
@@ -484,6 +484,8 @@ void handle_request(){
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
+    int r_id, s_id;
+
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
     opcode = recv_int(new_dev, false);
@@ -582,10 +584,21 @@ void handle_request(){
     case SHOW_OPCODE:
         printf("SHOW BRANCH!\n");
 
+        //get sender & receiver info about pending_messages
+        r_id = recv_int(new_dev, true);
+        s_id = recv_int(new_dev, true);
+        //todo auth
+
+        code = recv_int(new_dev, true);
+        if(code == OK_CODE){
+            pending_messages[r_id][s_id] = 0;
+            // todo: inform receiver
+        }
+
+
         break;
 
     case CHAT_OPCODE:
-        int r_id, s_id;
         char r_username[WORD_SIZE];
         char s_username[WORD_SIZE];
 

@@ -213,7 +213,7 @@ int find_device(const char* usr){
     //find device from username
     int i;
 
-    printf("[device] find_device: looking for '%s' in %d devices registred...\n", usr, n_dev);
+    printf("[find_device] looking for '%s' in %d devices registred...\n", usr, n_dev);
     for(i=0; i<n_dev; i++){
         struct device *d = &devices[i];
         
@@ -761,6 +761,7 @@ void hanging_command(){
             char type[WORD_SIZE] = {"txt"};
             recv_file(server.sd, type, false);
             
+            //!remove
             /*
             //check if device_ID directory exists: eventually create it
             char new_path[9];
@@ -795,13 +796,53 @@ void hanging_command(){
 }
 
 void show_command(){
+    //get sender info
+    int s_id;
+    char s_username[WORD_SIZE];
+    char buff[BUFFER_SIZE];
+    scanf("%s", s_username);
 
-    //first handshake
+    //check to avoid self-show
+    if(!strcmp(s_username, my_device.username)){
+        printf("[device] Error: showing messages from yourself");
+	    return;
+    } 
+
+    update_devices();
+
+    s_id = find_device(s_username);
+    if(s_id == -1){
+        printf("[device] user '%s' does not exists: try one of below...\n", s_username);
+        list_command();
+        return;
+    }
+
+    //look for pending_messages file: ID_device_sID.txt
+    char filename[13];
+    sprintf(filename, "%d_from_%d.txt", my_device.id, s_id);
+
+    FILE *fp = fopen(filename, "r");
+    if(fp){
+        while(fgets(buff, sizeof(buff), fp))
+            printf("%s", buff);
+            remove(filename);
+            printf("[device] removed file %s", filename);
+    }   
+    else{
+        printf("[device] there are no pending_messages: try <hanging> before!\n");
+        goto show_end;
+    }
+
+    //teling server I read
     create_srv_socket_tcp(server.port);
-    send_opcode(SHOW_OPCODE);
+    send_opcode(CHAT_OPCODE);
     sleep(1);
-    // send_int(my_device.id, server);
 
+    send_int(my_device.id, server.sd);
+    send_int(s_id, server.sd);
+    send_int(OK_CODE, server.sd);
+
+    show_end:
     printf("SHOW TASK COMPLETED\n");
     prompt();
     close(server.sd);
@@ -809,7 +850,7 @@ void show_command(){
 
 
 void chat_command(){
-    char r_username[BUFFER_SIZE];
+    char r_username[WORD_SIZE];
     int r_id, r_sd;
     scanf("%s", r_username);
 
