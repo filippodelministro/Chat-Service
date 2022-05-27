@@ -16,13 +16,14 @@ struct device{
     char* username;
     char* password;
     bool connected;             //true if chat already open
+
     
     //not needed for device purpouse
     ////bool registred;
     ////char time[8];
 
     //chat info
-    int msg_pend;
+    int pend_msg;
 }devices[MAX_DEVICES];
 
 struct device my_device;
@@ -534,13 +535,13 @@ void handle_request(){
     printf("[handle_request] accepted\n");
 
     //receive sender info: can be server [ERR_CODE] or a device [ID]
-    s_id = recv_int(s_sd, true);
+    s_id = recv_int(s_sd, false);
 
     if(s_id == ERR_CODE){
         //received request from server
         printf("[handle_request] request by server\n");
 
-        int cmd = recv_int(s_sd, true);
+        int cmd = recv_int(s_sd, false);
         switch (cmd){
         case ESC_OPCODE:
             printf("[device] server is now offline!\n");
@@ -550,6 +551,11 @@ void handle_request(){
         case IN_OPCODE:
             printf("[device] server is online!\n");
             server.connected = true;
+            break;
+
+        case SHOW_OPCODE:
+            int r_id = recv_int(server.sd, false);
+            printf("[device] user '%s' has now read your messages!\n", devices[r_id].username);
             break;
 
         default:
@@ -631,10 +637,6 @@ void signup_command(){
     //send username and password to server
     send_msg(username, server.sd);
     send_msg(password, server.sd);    
-    // strcat(buffer, username);
-    // strcat(buffer, DELIMITER);
-    // strcat(buffer, password);
-    // send(server.sd, buffer, strlen(buffer), 0);
 
     //receive dev_id
     int dev_id = recv_int(server.sd, false);
@@ -675,6 +677,7 @@ void in_command(){
         server.port, username, password
     );
 
+    update_devices();
     create_srv_socket_tcp(server.port);
 
     //send opcode to server and wait for ack
@@ -682,18 +685,13 @@ void in_command(){
     sleep(1);
 
     //send username and password to server
-    strcat(buffer, username);
-    strcat(buffer, DELIMITER);
-    strcat(buffer, password);
-    send(server.sd, buffer, strlen(buffer), 0);
-
-    //send dev_id & port to server
-    printf("sending dev_id: %d\n", my_device.id);
+    printf("sending my_device info: usr | pswd | id | port\n");
+    send_msg(username, server.sd);
+    send_msg(password, server.sd);    
     send_int(my_device.id, server.sd);
-    printf("sending port: %d\n", my_device.port);
     send_int(my_device.port, server.sd);
 
-    //receiving ACK to connection
+    //receiving OK_CODE to connection
     if(recv_int(server.sd, false) == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
@@ -701,8 +699,20 @@ void in_command(){
     }
 
     create_listening_socket_tcp();
-    update_devices();
 
+    //receive info about pending_messages: OK if dev had pend_msgs before logout
+    if(recv_int(server.sd, false) == OK_CODE){
+        //device had pending messages before logout
+        bool check = true;
+        while(recv_int(server.sd, false) == OK_CODE){
+            check = false;
+            int id = recv_int(server.sd, false);
+            printf("[device] user '%s' has not read your messages yet!\n", devices[id].username);
+        }
+        if(check)
+            printf("[device] all devices have read your pending messages!\n");
+    }
+    
     //complete: device is now online
     my_device.connected = true;
     printf("[device] You are now online!\n");
@@ -833,9 +843,9 @@ void show_command(){
         goto show_end;
     }
 
-    //teling server I read
+    //notifying server that show_command has been executed
     create_srv_socket_tcp(server.port);
-    send_opcode(CHAT_OPCODE);
+    send_opcode(SHOW_OPCODE);
     sleep(1);
 
     send_int(my_device.id, server.sd);
@@ -847,7 +857,6 @@ void show_command(){
     prompt();
     close(server.sd);
 }
-
 
 void chat_command(){
     char r_username[WORD_SIZE];
@@ -900,6 +909,7 @@ void chat_command(){
     close(server.sd);
 }
 
+
 void share_command(){
     int r_id, r_sd;
     char filename[WORD_SIZE];
@@ -934,6 +944,7 @@ void share_command(){
     printf("SHARE TASK COMPLETED\n");
 }
 
+
 void out_command(){
     create_srv_socket_tcp(server.port);
 
@@ -950,7 +961,7 @@ void out_command(){
     send_msg(my_device.username, server.sd);
     send_msg(my_device.password, server.sd);
     
-    //wait ACK from server to safe disconnect
+    //wait OK_CODE from server to safe disconnect
     if(recv_int(server.sd, false) == OK_CODE){
         my_device.connected = false;    
         printf("[device] You are now offline!\n");

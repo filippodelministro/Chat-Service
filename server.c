@@ -21,6 +21,9 @@ struct device{
     int id;
     char* username;
     char* password;
+
+    int pend_dev_before_logout;  
+    int pend_dev;               //number of pending device (they have pending_msgs)
 }devices[MAX_DEVICES];          //devices array
 
 int n_dev;                  //number of devices registred
@@ -244,6 +247,8 @@ int add_dev(const char* usr, const char* pswd){
     struct device* d = &devices[n_dev];
 
     d->id = n_dev;
+    d->pend_dev = 0;
+    d->pend_dev_before_logout = 0;
     d->username = malloc(sizeof(usr)+1);
     d->password = malloc(sizeof(pswd)+1);
     strcpy(d->username, usr);
@@ -480,7 +485,7 @@ void handle_request(){
     //for signup and in command
     int port;
     //// uint16_t id;
-    int id;
+    int id, sd;
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
@@ -491,13 +496,12 @@ void handle_request(){
     opcode = recv_int(new_dev, false);
     printf("opcode: %d\n", opcode);
 
-    //fix: semmai fare una fork() qui
     switch (opcode){
     case SIGNUP_OPCODE:                                                     
 
         //recevive username and password
-        recv_msg(new_dev, username, true);
-        recv_msg(new_dev, password, true);
+        recv_msg(new_dev, username, false);
+        recv_msg(new_dev, password, false);
         ret = add_dev(username, password);
 
         //send dev_id 
@@ -510,17 +514,9 @@ void handle_request(){
 
     case IN_OPCODE:                            
 
-        //recevive username and password
-        if(!recv(new_dev, buffer, BUFFER_SIZE, 0)){
-            perror("[server]: Error recv: \n");
-            exit(-1);
-        }
-
-        //split buffer in two string: username and password
-        strcpy(username, strtok(buffer, DELIMITER));
-        strcpy(password, strtok(NULL, DELIMITER));
-
-        //receive id & port
+        //receive usr, pswd, id, port from device
+        recv_msg(new_dev, username, false);
+        recv_msg(new_dev, password, false);
         id = recv_int(new_dev, false);
         port = recv_int(new_dev, false);
 
@@ -528,6 +524,26 @@ void handle_request(){
         ret = check_and_connect(id, port, username, password);
         send_int(ret, new_dev);
 
+        //check if device had pending_device before logout
+        if(devices[id].pend_dev_before_logout)
+            send_int(OK_CODE, new_dev);
+        else{
+            send_int(ERR_CODE, new_dev);
+            goto in_end;
+        }
+        
+        //if here there are pending_messages
+        for(int i=0; i<MAX_DEVICES; i++){
+            while(pending_messages[id][i]){
+                //inform that user 'i' did not read pend_msgs
+                send_int(OK_CODE, new_dev);    
+                send_int(i, new_dev);   
+                break;
+            }
+        }
+        send_int(ERR_CODE, new_dev);
+
+        in_end:
         memset(&buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
@@ -544,14 +560,14 @@ void handle_request(){
         //
 
         //check if there are pending messages and send OK_CODE or ERR_CODE
-        int code = ERR_CODE;
+        ret = ERR_CODE;
         for(int i=0; i<MAX_DEVICES; i++){
             if(pending_messages[i][id]){
-                code = OK_CODE;
+                ret = OK_CODE;
                 break;
             }
         }
-        send_int(code, new_dev);
+        send_int(ret, new_dev);
 
         //sending for each device: OK_CODE | sender_id | number of message from sender
         for(int i=0; i<MAX_DEVICES; i++){
@@ -583,26 +599,42 @@ void handle_request(){
 
     case SHOW_OPCODE:
         printf("SHOW BRANCH!\n");
+        //device receiver just read pending_messages from device sender
 
         //get sender & receiver info about pending_messages
         r_id = recv_int(new_dev, true);
         s_id = recv_int(new_dev, true);
         //todo auth
 
-        code = recv_int(new_dev, true);
-        if(code == OK_CODE){
-            pending_messages[r_id][s_id] = 0;
-            // todo: inform receiver
+        //if OK_CODE show_cmd worked for receiver
+        ret = recv_int(new_dev, true);
+        if(ret == OK_CODE){
+            printf("pend_msg: %d\n", pending_messages[s_id][r_id]);
+            pending_messages[s_id][r_id] = 0;
+            
+            if(devices[s_id].connected){
+                //inform sender that receiver read pending_messages
+                sd = create_chat_socket(s_id);
+                send_int(ERR_CODE, sd);
+
+                send_int(SHOW_OPCODE, sd);
+                send_int(r_id, sd);
+                close(sd);
+            }
+            else{
+                //handled in IN_BRANCH at sender next login
+                devices[s_id].pend_dev--;
+            }
         }
 
-
+        close(new_dev);
+        prompt();
         break;
 
     case CHAT_OPCODE:
         char r_username[WORD_SIZE];
         char s_username[WORD_SIZE];
 
-        
         //directory
         //todo: change [25]
         char dir_path[50];
@@ -637,6 +669,7 @@ void handle_request(){
         else{
             //request device is offline: server manage chat with new_dev  
             printf("'%s' is offline: getting messages from '%s'!\n", r_username, s_username);
+            devices[s_id].pend_dev++;
             
             //*check if directory already exists before create;
                 //*create a directory for all the pending_messages
@@ -711,6 +744,7 @@ void handle_request(){
         send_int(OK_CODE, new_dev);            
         
         //update device info
+        d->pend_dev_before_logout = d->pend_dev;
         d->connected = false;
         n_conn--;
 
