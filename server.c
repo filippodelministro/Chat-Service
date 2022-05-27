@@ -80,6 +80,7 @@ void list_command(){
 }
 
 int create_chat_socket(int);
+
 void esc_command(){
     //save network status before switching server off
 
@@ -91,11 +92,12 @@ void esc_command(){
         
         struct device* d = &devices[i];
         //copy network status in a file
-        fprintf(fp, "%d %s %s %s %d\n",
+        fprintf(fp, "%d %s %s %s %d %d %d\n",
             d->id, d->username,
             d->password,
             d->time,    
-            d->port
+            d->port,
+            d->pend_dev_before_logout, d->pend_dev
         );
 
         if(d->connected){
@@ -112,7 +114,7 @@ void esc_command(){
     fp = fopen("pending_messages.txt", "w");
     for(int i=0; i<MAX_DEVICES; i++){
         for(int j=0; j<MAX_DEVICES; j++){
-            fprintf(fp, "%d ", pending_messages[i][j]);
+            fprintf(fp, "%d", pending_messages[i][j]);
         }
         fprintf(fp, "\n");
     }
@@ -253,6 +255,7 @@ int add_dev(const char* usr, const char* pswd){
     d->password = malloc(sizeof(pswd)+1);
     strcpy(d->username, usr);
     strcpy(d->password, pswd);
+    strcpy(d->time, "00:00:00");            //default value: case of signup and not login
 
     printf("[server] add_dev: added new device!\n"
                     "\t dev_id: %d\n"
@@ -390,21 +393,21 @@ void restore_network(FILE* fp){
 
         //use strtok() to get buffer values 
         char* b = strtok(buff, " ");
-        d->id = atoi(b);
-        
-        b = strtok(NULL, " ");
-        d->username = malloc(sizeof(b));
+        d->id = atoi(b);                        //id
+        b = strtok(NULL, " ");                  
+        d->username = malloc(sizeof(b));        //username
         strcpy(d->username, b);
-
         b = strtok(NULL, " ");
-        d->password = malloc(sizeof(b));
+        d->password = malloc(sizeof(b));        //password
         strcpy(d->password, b);
-
         b = strtok(NULL, " ");
-        strcpy(d->time, b);
-
+        strcpy(d->time, b);                     //time
         b = strtok(NULL, " ");
-        d->port = atoi(b);
+        d->port = atoi(b);                      //port
+        b = strtok(NULL, " ");
+        d->pend_dev_before_logout = atoi(b);    //pend_dev_before_logout
+        b = strtok(NULL, " ");
+        d->pend_dev = atoi(b);                  //pend_dev
 
         //inform devices that server is online
         if(check_if_online(i)){
@@ -417,24 +420,18 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] got devices info\n");
     list_command();
 
-    //fix: restore pending_messages matrix (la stampa bene quindi c'è solo da leggerla)
+    //fix dont work    
     /*
-    fp = fopen("pending_messages.txt", "r");
-    printf("\n[restore_network] opened 'pending_messages.txt'\n");
+    fp = fopen("pending_messages.txt", "w");
     for(int i=0; i<MAX_DEVICES; i++){
         for(int j=0; j<MAX_DEVICES; j++){
-            fscanf(fp, "%d", pending_messages[i][j]);
-        }
-    }
-    fclose(fp);
-    
-    printf("\nGOT MATRIX\n");
-    for(int i=0; i<MAX_DEVICES; i++){
-        for(int j=0; j<MAX_DEVICES; j++){
-            printf("%d ", pending_messages[i][j]);
+            int val;
+            fscanf(fp, "%d", &val);
+            printf("%d", val);
         }
         printf("\n");
     }
+    fclose(fp);
     */
 
     printf("\n[restore_network] restored pending_messages matrix\n");
