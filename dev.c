@@ -43,7 +43,7 @@ fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
 //-----------    CHAT   -----------------
-int chat_socket[MAX_DEVICES];      //array of IDs of device in a chat
+// int chat_socket[MAX_DEVICES];      //array of IDs of device in a chat
 int n_dev_chat;                     //number of devices in chat
 
 //maybe in an unic extern file utility.c            ???
@@ -328,6 +328,14 @@ void handle_chat_w_server(){
     }
 }
 
+void add_dev_to_chat(int id, int sd){
+    devices[id].sd = sd;
+    
+    FD_SET(sd, &master);
+    if(sd > fdmax){fdmax = sd;}
+    n_dev_chat++;
+}
+
 void list_command();
 void handle_chat() {
     int code, ret, i;
@@ -586,11 +594,7 @@ void handle_request(){
 
     sleep(1);
     
-    n_dev_chat = 1;
-    devices[s_id].sd = s_sd;
-    // chat_socket[s_id] = s_sd;
-    FD_SET(s_sd, &master);
-    if(s_sd > fdmax){fdmax = s_sd;}
+    add_dev_to_chat(s_id, s_sd);
     handle_chat();
 
     close(s_sd);
@@ -894,18 +898,11 @@ void chat_command(){
         handle_chat_w_server();
     }
     else{
-        //receiver is online: chatting with him
-        r_sd = create_chat_socket(r_id);
-        // devices[r_id].sd = r_sd;
-
-        //handshake with receiver
+        //handshaek with receiver
+        int r_sd = create_chat_socket(r_id);
         send_int(my_device.id, r_sd);
 
-        n_dev_chat = 1;         //used in chat and incremented in case of '\a' command
-        devices[r_id].sd = r_sd;
-        // chat_socket[r_id] = r_sd;
-        FD_SET(r_sd, &master);
-        if(r_sd > fdmax){fdmax = r_sd;}
+        add_dev_to_chat(r_id, r_sd);
         handle_chat();
 
         close(r_sd);
