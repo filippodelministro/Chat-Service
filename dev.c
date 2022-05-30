@@ -158,6 +158,7 @@ int create_chat_socket(int id){
         exit(-1);
     }
 
+    printf("[device] create_chat_socket: END\n");
     return devices[id].sd;
 }
 
@@ -226,13 +227,12 @@ int find_device(const char* usr){
 }
 int find_device_from_socket(int sock){
     //find device from username
-    int i;
+    int j;
 
-    for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        if(d->sd == sock){
+    for(j=0; j<n_dev; j++){
+        if(devices[j].sd == sock){
             // printf("[find_device_from_socket] found: '%s'\n", devices[i].username);
-            return i;    
+            return j;    
         }
     }
     printf("[find_device_from_socket] not found!\n");
@@ -361,6 +361,7 @@ void handle_chat() {
                     //check chat_command and handle different cases                            
                     code = check_chat_command(msg);
 
+                    //todo: send_int_broadcast()
                     for(int i=0; i<MAX_DEVICES; i++)
                         if(devices[i].sd)
                             send_int(code, devices[i].sd);
@@ -371,6 +372,7 @@ void handle_chat() {
                         append_time(buffer, msg);
                         //send in any case message: if command, inform other device
                         //todo: convert in send_msg (remove BUFFER_SIZE)
+                        //todo: send_broadcast()
                         for(int i=0; i<MAX_DEVICES; i++)
                             if(devices[i].sd)
                                 send(devices[i].sd, buffer, BUFFER_SIZE, 0);
@@ -387,7 +389,6 @@ void handle_chat() {
                         list_command();
 
                         break;
-                    /*
                     case ADD_CODE:
                         //get new device info and send to all chat_devices
                         printf("[device] Type <user> to add to this chat: <user> has to be online!\n");
@@ -395,8 +396,10 @@ void handle_chat() {
                         scanf("%s", msg);
                         int n_id = find_device(msg);
 
-                        //todo: for(i..n_dev_chat)  => mando a tutti device in chat
-                        send_int(n_id, sock);
+                        //todo: send_int_broadcast()
+                        for(int i=0; i<MAX_DEVICES; i++)
+                            if(devices[i].sd)
+                                send_int(n_id, devices[i].sd);
 
                         //check if new_device exists and is online
                         if(n_id == -1){
@@ -409,8 +412,13 @@ void handle_chat() {
                         }
 
                         //if here chat with new user can start
+                        int n_sd = create_chat_socket(n_id);
+                        add_dev_to_chat(n_id, n_sd);
+                        send_int(my_device.id, n_sd);
+                        // system("clear");
 
                         break;
+                    /*
                     case SHARE_CODE:
                         //get filename and check if file exists
                         printf("[device] type <filename> to share\n");
@@ -460,6 +468,10 @@ void handle_chat() {
                 }*/
                 else if(i != listening_socket || i != server.sd){
                     //received message
+                    for(int j=0; j<MAX_DEVICES; j++){
+                        if(devices[j].sd)
+                            printf("\tusr:%s\tsd:%d\n", devices[j].username, devices[j].sd);
+                    }
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
@@ -483,19 +495,20 @@ void handle_chat() {
                         //todo: understand which device is exiting chat
                         printf("[device] Other device quit...\n");
                         sleep(1);
-                        printf("[device] Closing chat\n");
                         FD_CLR(sock, &master);
                         close(sock);
                         devices[s_id].sd = 0;
                         n_dev_chat--;
+                        printf("[device] Closing chat\n");
                         return;
 
                     case USER_CODE:
                         //nothing to do here
                         break;
 
-                    /*
                     case ADD_CODE:
+                        //fix: al secondo device che fa create_chat_socket il 'marco' si
+                        //fix: troverà qui dentro!!
                         int n_id = recv_int(sock, true);
                         printf("[device] received 'add_command' from other device\n");
                         update_devices();
@@ -510,8 +523,15 @@ void handle_chat() {
                             break;
                         }
                         printf("[device] adding user '%s' to this chat\n", devices[n_id].username);
+                        
+                        // sleep(2);
+                        // int n_sd = create_chat_socket(n_id);
+                        // add_dev_to_chat(n_id, n_sd);
+                        // send_int(my_device.id, n_sd);
+                        // system("clear");
                         break;
                     
+                    /*
                     case SHARE_CODE:
                         printf("[device] other device is sending you a file: wait...\n");
 
@@ -573,7 +593,6 @@ void handle_request(){
             break;
 
         case SHOW_OPCODE:
-
             int r_id = recv_int(server.sd, false);
             printf("[device] user '%s' has now read your messages!\n", devices[r_id].username);
             break;
@@ -587,14 +606,13 @@ void handle_request(){
 
     //received request from device
     update_devices();
-    printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
-    printf("[handle_request] %d devices in chat\n", ++n_dev_chat);
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
-
-    sleep(1);
-    
     add_dev_to_chat(s_id, s_sd);
+    printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
+    printf("[handle_request] %d devices in chat\n", n_dev_chat);
+    
+    sleep(1);
     handle_chat();
 
     close(s_sd);
