@@ -454,12 +454,18 @@ void handle_chat() {
                     }
 
                 }
-                /*
                 //fix: controllare
                 else if(i == listening_socket){
-                    //?inutile??;
-                    printf("i == listening_socket\n");
+                    printf("[handle_chat] received connection request!\n");
+                    struct sockaddr_in s_addr;
+                    socklen_t addrlen = sizeof(s_addr);    
+                    int s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
+
+                    int s_id = recv_int(s_sd, false);
+
+                    add_dev_to_chat(s_id, s_sd);
                 }
+                /*
                 else if(i == server.sd){
                     //todo: gestire caso della ESC del server;
                     printf("i == server.sd\n");
@@ -480,12 +486,15 @@ void handle_chat() {
                     switch (code){
                     case OK_CODE:
                         //receive message
-                       if(!recv(sock, (void*)buffer, BUFFER_SIZE, 0)){
+                       if(!recv(devices[s_id].sd, (void*)buffer, BUFFER_SIZE, 0)){
                             printf("[device] other device quit!\n");
-                            FD_CLR(sock, &master);
-                            close(sock);
+                            FD_CLR(devices[s_id].sd, &master);
+                            close(devices[s_id].sd);
                             devices[s_id].sd = 0;
-                            return;
+                            n_dev_chat--;
+                            
+                            if(!n_dev_chat) return;
+                            break;
                         }
                         printf("%s", buffer);
                         break;
@@ -499,16 +508,16 @@ void handle_chat() {
                         close(sock);
                         devices[s_id].sd = 0;
                         n_dev_chat--;
-                        printf("[device] Closing chat\n");
-                        return;
-
+                        if(!n_dev_chat){
+                            printf("[device] Closing chat\n");
+                            return;
+                        }
+                        break;
                     case USER_CODE:
                         //nothing to do here
                         break;
 
                     case ADD_CODE:
-                        //fix: al secondo device che fa create_chat_socket il 'marco' si
-                        //fix: troverà qui dentro!!
                         int n_id = recv_int(sock, true);
                         printf("[device] received 'add_command' from other device\n");
                         update_devices();
@@ -524,10 +533,10 @@ void handle_chat() {
                         }
                         printf("[device] adding user '%s' to this chat\n", devices[n_id].username);
                         
-                        // sleep(2);
-                        // int n_sd = create_chat_socket(n_id);
-                        // add_dev_to_chat(n_id, n_sd);
-                        // send_int(my_device.id, n_sd);
+                        sleep(1);
+                        int n_sd = create_chat_socket(n_id);
+                        add_dev_to_chat(n_id, n_sd);
+                        send_int(my_device.id, n_sd);
                         // system("clear");
                         break;
                     
