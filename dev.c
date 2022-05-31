@@ -78,6 +78,17 @@ void fdt_init(){
 
     printf("[fdt_init] set init done...\n");
 }
+void init_status(){
+    server.connected = true;
+    n_dev = n_dev_chat = 0;
+    for(int i=0; i<MAX_DEVICES; i++)
+        devices[i].sd = 0;
+
+   //init set structure 
+	fdt_init();
+	FD_SET(listening_socket, &master);
+	fdmax = listening_socket;
+}
 void send_opcode(int op){
 //send opcode to server
     // printf("[device] send opcode %d to server...\n", op);
@@ -345,6 +356,13 @@ void add_dev_to_chat(int id, int sd){
     if(sd > fdmax){fdmax = sd;}
     n_dev_chat++;
 }
+void remove_dev_from_chat(int id){
+//device id is leaving the chat: clear his socket descriptor from master_set
+    FD_CLR(devices[id].sd, &master);
+    close(devices[id].sd);
+    devices[id].sd = 0;
+    n_dev_chat--;    
+}
 void send_int_broadcast(int num){
 //send int to all devices connected in current chat
     int n_iter = 0;
@@ -385,19 +403,15 @@ void handle_chat() {
                     //fix: double user [time] at first send
                     fgets(msg, BUFFER_SIZE, stdin);
 
-                    //check chat_command and handle different cases                            
+                    //check chat_command: send code to other devices to inform what to do                           
                     code = check_chat_command(msg);
                     send_int_broadcast(code);
                     
                     switch (code){
                     case OK_CODE:
                         //message: format message and send it
-                        //send in any case message: if command, inform other device
                         append_time(buffer, msg);
                         send_msg_broadcast(buffer);
-                        // for(int i=0; i<MAX_DEVICES; i++)
-                        //     if(devices[i].sd)
-                        //         send(devices[i].sd, buffer, BUFFER_SIZE, 0);
                         
                         break;
                     case QUIT_CODE:
@@ -486,19 +500,39 @@ void handle_chat() {
                     socklen_t addrlen = sizeof(s_addr);    
                     int s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
+                    printf("[handle_chat] accepted request\n");
                     int s_id = recv_int(s_sd, false);
 
+                    if(s_id == ERR_CODE){
+                        //received request from server
+                        printf("[handle_chat] request by server\n");
+                        int cmd = recv_int(s_sd, false);
+
+                        switch (cmd){
+                            case ESC_OPCODE:
+                                //server is logging out while chat is opened
+                                server.connected = false;
+                                close(server.sd);
+                                // FD_CLR(server.sd, &master);
+                                printf("[device] server is now offline!\n");
+                                break;
+
+                            case IN_OPCODE:
+                                server.connected = true;
+                                // FD_SET(server.sd, &master);
+                                printf("[device] server is online!\n");
+                                break;
+
+                            default:
+                                printf("[device] Error in server command!\n");
+                                break;
+                            // return;
+                        }
+                    }
                     add_dev_to_chat(s_id, s_sd);
                 }
-                /*
-                else if(i == server.sd){
-                    //todo: gestire caso della ESC del server;
-                    printf("i == server.sd\n");
-
-                    // server.connected = false;
-                }*/
-                else if(i != listening_socket || i != server.sd){
-                    //received message
+                else if(i != listening_socket /*|| i != server.sd*/){
+                    //received message: find device who send it, than receive code and message
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
                     code = recv_int(sock, false);
@@ -508,12 +542,11 @@ void handle_chat() {
                         //receive message
                         if(!recv_msg(devices[s_id].sd, buffer, false)){
                             printf("[device] other device quit!\n");
-                            FD_CLR(devices[s_id].sd, &master);
-                            close(devices[s_id].sd);
-                            devices[s_id].sd = 0;
-                            n_dev_chat--;
-                            
-                            if(!n_dev_chat) return;
+                            remove_dev_from_chat(s_id);
+                            if(!n_dev_chat){
+                                printf("[device] Closing chat\n");
+                                return;
+                            }
                             break;
                         }
                         printf("%s", buffer);
@@ -521,13 +554,9 @@ void handle_chat() {
 
                     case QUIT_CODE:
                         //other device quit
-                        //todo: understand which device is exiting chat
                         printf("[device] Other device quit...\n");
                         sleep(1);
-                        FD_CLR(sock, &master);
-                        close(sock);
-                        devices[s_id].sd = 0;
-                        n_dev_chat--;
+                        remove_dev_from_chat(s_id);
                         if(!n_dev_chat){
                             printf("[device] Closing chat\n");
                             return;
@@ -557,7 +586,6 @@ void handle_chat() {
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
-                        // system("clear");
                         break;
                     
                     
@@ -570,15 +598,16 @@ void handle_chat() {
                             break;
                         }
 
+                        //get file type [.txt, .c, .h, ecc.]
                         char type[WORD_SIZE];
                         recv_msg(sock, type, true);
 
+                        //get file and copy in recv.[type]
                         printf("[device] receiving %s file...\n", type);
                         recv_file(sock, type, true);
                         struct stat st;
                         stat("recv.txt", &st);
-                        int size = st.st_size;
-                        
+                        int size = st.st_size;                        
                         printf("[device] received %d byte: check 'recv.%s'\n", size, type);
                         break;
                     
@@ -603,7 +632,7 @@ void handle_request(){
     socklen_t addrlen = sizeof(s_addr);    
     s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
     
-    printf("[handle_request] accepted request\n");
+    printf("\n[handle_request] accepted request\n");
 
     //receive sender info: can be server [ERR_CODE] or a device [ID]
     s_id = recv_int(s_sd, false);
@@ -945,7 +974,7 @@ void chat_command(){
         handle_chat_w_server();
     }
     else{
-        //handshaek with receiver
+        //handshake with receiver
         int r_sd = create_chat_socket(r_id);
         send_int(my_device.id, r_sd);
 
@@ -1078,17 +1107,6 @@ void read_command(){
 //* ///////////////////////////////////////////////////////////////////////
 //*                                 MAIN                                ///
 //* ///////////////////////////////////////////////////////////////////////
-void init_status(){
-    server.connected = true;
-    n_dev = n_dev_chat = 0;
-    for(int i=0; i<MAX_DEVICES; i++)
-        devices[i].sd = 0;
-
-   //init set structure 
-	fdt_init();
-	FD_SET(listening_socket, &master);
-	fdmax = listening_socket;
-}
 
 int main(int argc, char* argv[]){
     if(argc != 2){
