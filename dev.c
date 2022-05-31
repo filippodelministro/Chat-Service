@@ -59,7 +59,15 @@ void boot_message(){
                 "2) in      <srv_port> <username> <password>    --> connect to server\n"
     );
 }
-
+void help_chat_command(){
+    printf( "[%s]\ntype a message + ENTER to send it, or one of the following command:\n"
+                "1) \\u         --> show all registered user\n"
+                "2) \\a <user>  --> add new user to chat (if online)\n"
+                "3) \\s <file>  --> share <file> to all user in current chat\n"
+                "4) \\q         --> quit chat\n",
+                my_device.username
+    );
+}
 //Function called by the server so manage socket and interaction with devices
 //* ///////////////////////////////////////////////////////////////////////
 //*                             FUNCTIONS                               ///
@@ -265,6 +273,9 @@ int check_chat_command(char* cmd){
     else if(!strncmp(cmd, "\\s", 2)){
         return SHARE_CODE;
     }
+    else if(!strncmp(cmd, "\\h", 2)){
+        return HELP_CODE;
+    }
 
     return OK_CODE;
 }
@@ -321,6 +332,9 @@ void handle_chat_w_server(){
             //todo: se ho tempo cambiare e gestire in altro modo (send al server e poi al device)
             printf("[device] Error: command is not valid: other device is offline\n"); 
             break;
+        case HELP_CODE:
+            help_chat_command();
+            break;
         default:
             printf("[handle_chat_w_server] error: chat_command is not valid\n");
             return;
@@ -344,6 +358,7 @@ void handle_chat() {
     //// bool first_interaction = true;
    
     system("clear");
+    help_chat_command();
 
     while(true){
         read_fds = master; 
@@ -454,6 +469,9 @@ void handle_chat() {
                         fclose(fp);
                         printf("[device] file shared!\n");
                         break;
+                    case HELP_CODE:
+                        help_chat_command();
+                        break;
 
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
@@ -563,6 +581,10 @@ void handle_chat() {
                         int size = st.st_size;
                         
                         printf("[device] received %d byte: check 'recv.%s'\n", size, type);
+                        break;
+                    
+                    case HELP_CODE:
+                        //nothing to do here
                         break;
 
                     default:
