@@ -17,13 +17,8 @@ struct device{
     char* password;
     bool connected;             //true if chat already open
 
-    
-    //not needed for device purpouse
-    ////bool registred;
-    ////char time[8];
-
     //chat info
-    int pend_msg;
+    // int pend_msg;
     bool hanging_done;
 }devices[MAX_DEVICES];
 
@@ -31,7 +26,7 @@ struct device my_device;
 int n_dev;                  //number of devices registred
 
 //-----------     SERVER    -----------------
-//server considered as a device
+//server considered as a special device
 struct device server;
 
 //-----------     SET    -----------------
@@ -43,7 +38,6 @@ fd_set read_fds;        //read set: managed from select()
 int fdmax;
 
 //-----------    CHAT   -----------------
-// int chat_socket[MAX_DEVICES];      //array of IDs of device in a chat
 int n_dev_chat;                     //number of devices in chat
 
 //maybe in an unic extern file utility.c            ???
@@ -82,17 +76,17 @@ void fdt_init(){
 	
 	fdmax = 0;
 
-    printf("[device] fdt_init: set init done...\n");
+    printf("[fdt_init] set init done...\n");
 }
 void send_opcode(int op){
-    //send opcode to server
+//send opcode to server
     // printf("[device] send opcode %d to server...\n", op);
     send_int(op, server.sd);
 }
 
 //*manage socket
 void create_srv_socket_tcp(int p){
-    // printf("[device] create_srv_tcp_socket: trying to connect to server...\n");
+//create socket and connect to server
     server.port = p;
 
     //create
@@ -119,6 +113,7 @@ void create_srv_socket_tcp(int p){
     // printf("[device] create_srv_tcp_socket: waiting for connection...\n");
 }
 void create_listening_socket_tcp(){
+//create socket to listen and wait for connection from other devices
     if((listening_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("[device] socket() error");
         exit(-1);
@@ -144,6 +139,7 @@ void create_listening_socket_tcp(){
     if(listening_socket > fdmax){fdmax = listening_socket;}
 }
 int create_chat_socket(int id){
+//create socket to connect with other devices diring chat
     printf("[device] create_chat_socket: BEGIN\n");
 
     //create socket
@@ -173,7 +169,7 @@ int create_chat_socket(int id){
 
 //*manage devices
 void dev_init(int id, const char* usr, const char* pswd){
-    //initialize my_device structure with usr/pswd get by user & dev_id get server
+//initialize my_device structure with usr/pswd get by user and dev_id get server
     struct device* d = &my_device;
 
     d->id = id;
@@ -190,9 +186,8 @@ void dev_init(int id, const char* usr, const char* pswd){
     );
 }
 void update_devices(){
-    /*update other devices info; ask to server follwing info for each device registered:
-        username | port | status*/
-
+//update other devices info; ask to server follwing info for each device registered:
+//username | port | status
     char buffer[BUFFER_SIZE];
     struct device* d;
 
@@ -222,22 +217,18 @@ void update_devices(){
     close(server.sd);
 }
 int find_device(const char* usr){
-    //find device from username
+//find device from username
     int i;
-
     printf("[find_device] looking for '%s' in %d devices registred...\n", usr, n_dev);
     for(i=0; i<n_dev; i++){
-        struct device *d = &devices[i];
-        
-        if(!strcmp(d->username, usr))
+        if(!strcmp(devices[i].username, usr))
             return i;    
     }
     return -1;      //not found
 }
 int find_device_from_socket(int sock){
-    //find device from username
+//find device from socket descriptor: used in handle_chat to identify sender 
     int j;
-
     for(j=0; j<n_dev; j++){
         if(devices[j].sd == sock){
             // printf("[find_device_from_socket] found: '%s'\n", devices[i].username);
@@ -249,7 +240,7 @@ int find_device_from_socket(int sock){
 }
 
 bool authentication(){    
-    //send username & password to server to authenticate
+//send username & password to server to authenticate
     send_msg(my_device.username, server.sd);
     send_msg(my_device.password, server.sd);
     if(recv_int(server.sd, false) == OK_CODE)
@@ -260,7 +251,7 @@ bool authentication(){
 
 //*manage chats
 int check_chat_command(char* cmd){
-//check if user typed a command while chatting: return an INT with CMD_CODE
+//check if user typed a command while chatting: return an INT with COMMAND_CODE
     char user[WORD_SIZE];
 
     if(!strncmp(cmd, "\\q", 2)){
@@ -347,7 +338,7 @@ void handle_chat_w_server(){
 }
 
 void add_dev_to_chat(int id, int sd){
-//add device to current chat devices list: also add sd in master for select() used in handle_chat
+//device id is joining the chat: set his socket descriptor and adding it to master_set
     devices[id].sd = sd;
     
     FD_SET(sd, &master);
@@ -370,6 +361,7 @@ void send_msg_broadcast(char buffer[BUFFER_SIZE]){
         if(devices[i].sd)
             send_msg(buffer, devices[i].sd);
 }
+
 void list_command();
 void handle_chat() {
     int code, ret, i;
@@ -664,7 +656,6 @@ void handle_request(){
 //*                             COMMANDS                                ///
 //* ///////////////////////////////////////////////////////////////////////
 
-//prompt an help list message on stdout
 void help_command(){
 	printf( "Type a command:\n"
             "1) list         --> show registered users\n"
@@ -722,7 +713,6 @@ void signup_command(){
 }
 
 void in_command(){
-
     char srv_port[WORD_SIZE];   //fix: come in signup
     char username[WORD_SIZE];
     char password[WORD_SIZE];
@@ -787,7 +777,7 @@ void in_command(){
 }
 
 void list_command(){
-    //print all devices info: id | username | port | status
+//print all devices info: id | username | port | status
     struct device* d;
     update_devices();
 
@@ -868,7 +858,6 @@ void hanging_command(){
 }
 
 void show_command(){
-    //get sender info
     int s_id;
     char s_username[WORD_SIZE];
     char buff[BUFFER_SIZE];
@@ -1015,15 +1004,16 @@ void out_command(){
     send_int(my_device.id, server.sd);
     if(!authentication()){
         printf("[device] out_command: authentication failed!\n");
+        exit(-1);
         return;
     }
     sleep(1);
     
-    printf("[device] You are now offline!\n");
-
+    my_device.connected = false;
     close(listening_socket);
     FD_CLR(listening_socket, &master);
     close(server.sd);
+    printf("[device] You are now offline!\n");
 }
 
 void read_command(){
@@ -1088,20 +1078,7 @@ void read_command(){
 //* ///////////////////////////////////////////////////////////////////////
 //*                                 MAIN                                ///
 //* ///////////////////////////////////////////////////////////////////////
-
-int main(int argc, char* argv[]){
-    
-    int i;
-    // int i, newfd, ret;
-    // socklen_t addrlen;
-    char buffer[BUFFER_SIZE];
-
-    if(argc != 2){
-		fprintf(stderr, "Error! Correct syntax: ./dev <port>\n"); 
-		exit(-1);
-    }
-
-    my_device.port = atoi(argv[1]);
+void init_status(){
     server.connected = true;
     n_dev = n_dev_chat = 0;
     for(int i=0; i<MAX_DEVICES; i++)
@@ -1111,48 +1088,34 @@ int main(int argc, char* argv[]){
 	fdt_init();
 	FD_SET(listening_socket, &master);
 	fdmax = listening_socket;
+}
+
+int main(int argc, char* argv[]){
+    if(argc != 2){
+		fprintf(stderr, "Error! Correct syntax: ./dev <port>\n"); 
+		exit(-1);
+    }
+
+    //init device and network status
+    init_status();
+    my_device.port = atoi(argv[1]);
     
-    //prompt boot message
     boot_message();
     prompt();
 
     while(true){
-
         read_fds = master;
-
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("[device] error select() ");
 			exit(-1);
 		}
-
-        for(i=0; i<=fdmax; i++){
-
-            if(FD_ISSET(i, &read_fds)){
-                
-                if(!i){
-                    //keyboard
+        for(int i=0; i<=fdmax; i++){
+            if(FD_ISSET(i, &read_fds)){              
+                if(!i)                              //keyboard
                     read_command();
-                }
-
-                else if(i == listening_socket){
-                    //connection request
+                else if(i == listening_socket)      //handle request (server or other device)
                     handle_request();
-                }
                 
-                // else if(i == server.sd){
-                //     //connection request by server
-                //     // i = recv_int(server.sd, false);
-                //     // printf("[device] TEST: received %d\n", i);
-
-                //     printf("\t\ti == server.sd\n");
-                //     int opcode = recv_int(server.sd, true);
-                //     if(opcode == OUT_OPCODE)
-                //         printf("[device] SERVER E' OFFLINE\n");
-                // }
-                
-
-                //clear buffer and prompt
-                memset(buffer, 0, BUFFER_SIZE);
                 prompt();
             }
         }

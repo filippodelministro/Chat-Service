@@ -57,6 +57,7 @@ void help_command(){
 }
 
 void list_command(){
+//show all registered devices and their status: username | time | port | status 
     int i;
 
     printf("\n[server] list_command: %u devices registered, %d connected>\n", n_dev, n_conn);
@@ -80,9 +81,8 @@ void list_command(){
 }
 
 int create_chat_socket(int);
-
 void esc_command(){
-    //save network status before switching server off
+//save network status before switching server off
 
     int i, sd;
     FILE* fp = fopen("network_status.txt", "w");
@@ -775,25 +775,17 @@ int main(int argc, char** argv){
         //  1. read command from keyboard
         //  2. handle request from devices
     while(true){
-        int i;
         read_fds = master;
         //todo: set check_command() as a deamon
-
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("[server] error: select() ");
 			exit(-1);
 		}
-
-        for(i=0; i<=fdmax; i++){
-    
+        for(int i=0; i<=fdmax; i++){
             if(FD_ISSET(i, &read_fds)){
-
-                //keyboard                    
                 if(i == 0)                      
-                    read_command();     
-
-                //deveices request             
-                if(i == listening_socket)  
+                    read_command();             //keyboard
+                if(i == listening_socket)       //device request  
                     handle_request();
             }	 
         }
