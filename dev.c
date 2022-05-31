@@ -418,7 +418,7 @@ void handle_chat() {
                         // system("clear");
 
                         break;
-                    /*
+                    
                     case SHARE_CODE:
                         //get filename and check if file exists
                         printf("[device] type <filename> to share\n");
@@ -428,12 +428,16 @@ void handle_chat() {
                         FILE *fp = fopen(msg, "r");
                         if(fp == NULL){
                             printf("[device] file '%s' does not exists!\n", msg);
-                            send_int(ERR_CODE, sock);
+                            for(int i=0; i<MAX_DEVICES; i++)
+                                if(devices[i].sd)  
+                                    send_int(ERR_CODE, devices[i].sd);
                             break;
                         }
                         
                         //file exists: sending it
-                        send_int(OK_CODE, sock);
+                        for(int i=0; i<MAX_DEVICES; i++)
+                                if(devices[i].sd)  
+                                    send_int(OK_CODE, devices[i].sd);
                         
                         //get file type from name
                         char* name = strtok(msg, ".");
@@ -441,12 +445,15 @@ void handle_chat() {
 
                         //send type, than file to other device
                         printf("[device] sending %s file...\n", type);
-                        send_msg(type, sock);
-                        send_file(fp, sock);
+                        for(int i=0; i<MAX_DEVICES; i++){
+                            if(devices[i].sd){
+                                send_msg(type, devices[i].sd);
+                                send_file(fp,  devices[i].sd);
+                            }
+                        }
                         fclose(fp);
                         printf("[device] file shared!\n");
                         break;
-                    */
 
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
@@ -474,10 +481,6 @@ void handle_chat() {
                 }*/
                 else if(i != listening_socket || i != server.sd){
                     //received message
-                    for(int j=0; j<MAX_DEVICES; j++){
-                        if(devices[j].sd)
-                            printf("\tusr:%s\tsd:%d\n", devices[j].username, devices[j].sd);
-                    }
                     //todo: convert in recv_msg (remove BUFFER_SIZE)
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
@@ -540,7 +543,7 @@ void handle_chat() {
                         // system("clear");
                         break;
                     
-                    /*
+                    
                     case SHARE_CODE:
                         printf("[device] other device is sending you a file: wait...\n");
 
@@ -561,7 +564,6 @@ void handle_chat() {
                         
                         printf("[device] received %d byte: check 'recv.%s'\n", size, type);
                         break;
-                    */
 
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
