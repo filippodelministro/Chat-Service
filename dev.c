@@ -67,6 +67,7 @@ void help_chat_command(){
                 "4) \\q         --> quit chat\n",
                 my_device.username
     );
+    printf("----------------------------------------------------------\n");
 }
 //Function called by the server so manage socket and interaction with devices
 //* ///////////////////////////////////////////////////////////////////////
@@ -259,6 +260,7 @@ bool authentication(){
 
 //*manage chats
 int check_chat_command(char* cmd){
+//check if user typed a command while chatting: return an INT with CMD_CODE
     char user[WORD_SIZE];
 
     if(!strncmp(cmd, "\\q", 2)){
@@ -277,7 +279,7 @@ int check_chat_command(char* cmd){
         return HELP_CODE;
     }
 
-    return OK_CODE;
+    return OK_CODE;     //no command: just a message
 }
 void append_time(char * buffer, char *msg){
     time_t rawtime; 
@@ -291,6 +293,8 @@ void append_time(char * buffer, char *msg){
 }
 
 void handle_chat_w_server(){
+//handle device comunication with server
+//used when a device tries to chat with an offline device
     int code;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
@@ -343,13 +347,29 @@ void handle_chat_w_server(){
 }
 
 void add_dev_to_chat(int id, int sd){
+//add device to current chat devices list: also add sd in master for select() used in handle_chat
     devices[id].sd = sd;
     
     FD_SET(sd, &master);
     if(sd > fdmax){fdmax = sd;}
     n_dev_chat++;
 }
-
+void send_int_broadcast(int num){
+//send int to all devices connected in current chat
+    int n_iter = 0;
+    for(int i=0; i<MAX_DEVICES && n_iter <= n_dev_chat; i++){
+        if(devices[i].sd){
+            send_int(num, devices[i].sd);
+            n_iter++;
+        }
+    }
+}
+void send_msg_broadcast(char buffer[BUFFER_SIZE]){
+//send int to all devices connected in current chat
+    for(int i=0; i<MAX_DEVICES; i++)
+        if(devices[i].sd)
+            send_msg(buffer, devices[i].sd);
+}
 void list_command();
 void handle_chat() {
     int code, ret, i;
@@ -375,22 +395,17 @@ void handle_chat() {
 
                     //check chat_command and handle different cases                            
                     code = check_chat_command(msg);
-
-                    //todo: send_int_broadcast()
-                    for(int i=0; i<MAX_DEVICES; i++)
-                        if(devices[i].sd)
-                            send_int(code, devices[i].sd);
+                    send_int_broadcast(code);
                     
                     switch (code){
                     case OK_CODE:
                         //message: format message and send it
-                        append_time(buffer, msg);
                         //send in any case message: if command, inform other device
-                        //todo: convert in send_msg (remove BUFFER_SIZE)
-                        //todo: send_broadcast()
-                        for(int i=0; i<MAX_DEVICES; i++)
-                            if(devices[i].sd)
-                                send(devices[i].sd, buffer, BUFFER_SIZE, 0);
+                        append_time(buffer, msg);
+                        send_msg_broadcast(buffer);
+                        // for(int i=0; i<MAX_DEVICES; i++)
+                        //     if(devices[i].sd)
+                        //         send(devices[i].sd, buffer, BUFFER_SIZE, 0);
                         
                         break;
                     case QUIT_CODE:
@@ -408,13 +423,10 @@ void handle_chat() {
                         //get new device info and send to all chat_devices
                         printf("[device] Type <user> to add to this chat: <user> has to be online!\n");
                         update_devices();
+
                         scanf("%s", msg);
                         int n_id = find_device(msg);
-
-                        //todo: send_int_broadcast()
-                        for(int i=0; i<MAX_DEVICES; i++)
-                            if(devices[i].sd)
-                                send_int(n_id, devices[i].sd);
+                        send_int_broadcast(n_id);
 
                         //check if new_device exists and is online
                         if(n_id == -1){
@@ -429,7 +441,7 @@ void handle_chat() {
                         //if here chat with new user can start
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
-                        send_int(my_device.id, n_sd);
+                        send_int(my_device.id, n_sd);           //handshake
                         // system("clear");
 
                         break;
@@ -443,16 +455,12 @@ void handle_chat() {
                         FILE *fp = fopen(msg, "r");
                         if(fp == NULL){
                             printf("[device] file '%s' does not exists!\n", msg);
-                            for(int i=0; i<MAX_DEVICES; i++)
-                                if(devices[i].sd)  
-                                    send_int(ERR_CODE, devices[i].sd);
+                            send_int_broadcast(ERR_CODE);
                             break;
                         }
                         
                         //file exists: sending it
-                        for(int i=0; i<MAX_DEVICES; i++)
-                                if(devices[i].sd)  
-                                    send_int(OK_CODE, devices[i].sd);
+                        send_int_broadcast(OK_CODE);
                         
                         //get file type from name
                         char* name = strtok(msg, ".");
@@ -499,7 +507,6 @@ void handle_chat() {
                 }*/
                 else if(i != listening_socket || i != server.sd){
                     //received message
-                    //todo: convert in recv_msg (remove BUFFER_SIZE)
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
                     code = recv_int(sock, false);
@@ -507,7 +514,7 @@ void handle_chat() {
                     switch (code){
                     case OK_CODE:
                         //receive message
-                       if(!recv(devices[s_id].sd, (void*)buffer, BUFFER_SIZE, 0)){
+                        if(!recv_msg(devices[s_id].sd, buffer, false)){
                             printf("[device] other device quit!\n");
                             FD_CLR(devices[s_id].sd, &master);
                             close(devices[s_id].sd);
@@ -557,7 +564,7 @@ void handle_chat() {
                         sleep(1);
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
-                        send_int(my_device.id, n_sd);
+                        send_int(my_device.id, n_sd);           //handshake
                         // system("clear");
                         break;
                     
