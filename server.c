@@ -423,10 +423,7 @@ bool authentication(int id, int sock){
 }
 //* //////////////////////////////////////////////////////////////////////
 
-//prende opcode dal device (recv), poi lo fa gestire da un 
-//processo figlio con uno switch case
 void handle_request(){
-
     //connecting device
     int new_dev;
     struct device* d;
@@ -435,19 +432,17 @@ void handle_request(){
 
     char buffer[BUFFER_SIZE];
     int ret;
-    //// uint16_t ret_;
-    //// pid_t pid;
 
     //tell which command to do
     uint16_t opcode;
 
     //for signup and in command
     int port;
-    //// uint16_t id;
     int id, sd;
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
+    //for chat, hanging, show command
     int r_id, s_id;
 
     //accept new connection and get opcode
@@ -466,7 +461,6 @@ void handle_request(){
         //send dev_id 
         send_int(ret, new_dev);
 
-        memset(&buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
@@ -503,7 +497,6 @@ void handle_request(){
         send_int(ERR_CODE, new_dev);
 
         in_end:
-        memset(&buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
@@ -600,9 +593,8 @@ void handle_request(){
         char s_username[WORD_SIZE];
 
         //directory
-        //todo: change [25]
-        char dir_path[50];
-        char filename[50];
+        char dir_path[WORD_SIZE];
+        char filename[WORD_SIZE];
         struct stat st = {0};
 
         //get sender & receiver info
@@ -640,8 +632,6 @@ void handle_request(){
                 //*create a subdirectory for each receiver [offline]
 
             //all pending_msgs
-            //fix: mettere in una init, altrimenti ogni volta la ricrea ??
-            
             sprintf(dir_path, "./pending_messages");
             if(stat(dir_path, &st) == -1)
                 mkdir(dir_path, 0700);
@@ -700,7 +690,6 @@ void handle_request(){
 
         list_command();
 
-        memset(buffer, 0, sizeof(buffer));
         close(new_dev);
         prompt();
         break;
