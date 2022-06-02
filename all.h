@@ -39,6 +39,7 @@
 #define ADD_CODE            65531
 #define SHARE_CODE          65530
 #define HELP_CODE           65529
+#define CLEAR_CODE           65528
 
 char* DELIMITER = "-";
 

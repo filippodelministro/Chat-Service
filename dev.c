@@ -19,6 +19,7 @@ struct device{
 
     //chat info
     // int pend_msg;
+    char chat_path[15];
     bool hanging_done;
 }devices[MAX_DEVICES];
 
@@ -58,7 +59,8 @@ void help_chat_command(){
                 "1) \\u         --> show all registered user\n"
                 "2) \\a <user>  --> add new user to chat (if online)\n"
                 "3) \\s <file>  --> share <file> to all user in current chat\n"
-                "4) \\q         --> quit chat\n",
+                "4) \\q         --> quit chat\n"
+                "5) \\c         --> remove chat history\n",
                 my_device.username
     );
     printf("----------------------------------------------------------\n");
@@ -194,7 +196,14 @@ void dev_init(int id, const char* usr, const char* pswd){
                     "\t username: %s \n"
                     "\t password: %s\n",
                     d->id, d->username, d->password
-    );
+    ); 
+    //all pending_msgs
+    struct stat st = {0};
+    char dir_path[15];
+    sprintf(dir_path, "./chat_device_%d", my_device.id);
+    strcpy(my_device.chat_path, dir_path);
+    if(stat(dir_path, &st) == -1)
+        mkdir(dir_path, 0700);
 }
 void update_devices(){
 //update other devices info; ask to server follwing info for each device registered:
@@ -279,6 +288,9 @@ int check_chat_command(char* cmd){
     }
     else if(!strncmp(cmd, "\\h", 2)){
         return HELP_CODE;
+    }
+    else if(!strncmp(cmd, "\\c", 2)){
+        return CLEAR_CODE;
     }
 
     return OK_CODE;     //no command: just a message
@@ -373,22 +385,44 @@ void send_int_broadcast(int num){
         }
     }
 }
-void send_msg_broadcast(char buffer[BUFFER_SIZE]){
-//send int to all devices connected in current chat
-    for(int i=0; i<MAX_DEVICES; i++)
-        if(devices[i].sd)
+
+int send_msg_broadcast(char buffer[BUFFER_SIZE]){
+//send msg to all devices connected in current chat
+//if single_chat return ID of device in chat
+    int ret = -1;
+    int n_send = 0;
+    for(int i=0; i<MAX_DEVICES && n_send < n_dev_chat; i++)     //optimization: max n_dev_chat iteration
+        if(devices[i].sd){
+            if(n_dev_chat == 1)
+                ret = i;                        //when single_chat return ID of device in chat 
             send_msg(buffer, devices[i].sd);
+            n_send++;
+        }
+    return ret;
 }
 
 void list_command();
 void handle_chat() {
-    int code, ret, i;
+    int code, ret, i, id;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
-    //// bool first_interaction = true;
    
     system("clear");
     help_chat_command();
+
+    //fix: begin
+    //when handle_chat starts, there is a single_chat: 
+    //find device to chat with: used to save chat in file (only for single_chat)
+    /*
+    for(int i=0; i<MAX_DEVICES; i++){
+        if(devices[i].sd){
+            id = i;
+            break;
+        }
+    }
+    */
+    printf("[handle_chat] chatting with %d device: '%s'", n_dev_chat, devices[id].username);
+    //fix: end
 
     while(true){
         read_fds = master; 
@@ -412,7 +446,19 @@ void handle_chat() {
                         //message: format message and send it
                         append_time(buffer, msg);
                         send_msg_broadcast(buffer);
-                        
+
+                        //save in chat_file (not groupchat)
+                        //fix: begin
+                        if(n_dev_chat == 1){
+                            char filename[WORD_SIZE];
+                            sprintf(filename, my_device.chat_path, "chat_with_%d.txt", id);
+                            printf("filename: %s\n", filename);
+                            FILE *fp = fopen(filename, "w");
+                            fprintf(fp, "%s\n", buffer);
+                            fclose(fp);
+                        }
+                        //fix: end
+
                         break;
                     case QUIT_CODE:
                         printf("[device] Quit chat!\n");
@@ -486,6 +532,10 @@ void handle_chat() {
                     case HELP_CODE:
                         help_chat_command();
                         break;
+                    
+                    case CLEAR_CODE:
+                        //todo: remove chat_file
+                        break;
 
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
@@ -550,6 +600,7 @@ void handle_chat() {
                             break;
                         }
                         printf("%s", buffer);
+                        //todo: copia su chat_file
                         break;
 
                     case QUIT_CODE:
@@ -614,6 +665,10 @@ void handle_chat() {
                     case HELP_CODE:
                         //nothing to do here
                         break;
+                    
+                    case CLEAR_CODE:
+                        //nothing to do here
+                        break;
 
                     default:
                         printf("[handle_chat] error: chat_command is not valid\n");
@@ -669,7 +724,9 @@ void handle_request(){
     update_devices();
     //todo: add check Y/N to connect (handle d->connected)
     //todo: manage history of chat
+
     add_dev_to_chat(s_id, s_sd);
+    n_dev_chat = 1;
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     printf("[handle_request] %d devices in chat\n", n_dev_chat);
     
@@ -977,6 +1034,18 @@ void chat_command(){
         //handshake with receiver
         int r_sd = create_chat_socket(r_id);
         send_int(my_device.id, r_sd);
+
+        char filename[WORD_SIZE];
+        sprintf(filename, "chat_with_%d.txt", r_id);
+        FILE* fp = fopen(filename, "r");
+        if(fp){
+            char buff[BUFFER_SIZE];
+            while(fgets(buff, 50, fp) != NULL)
+                printf("%s", buff);
+            fclose(fp);
+        }
+        else
+            printf("[chat_command] first chat with %s: opened %s\n", devices[r_id].username, filename);
 
         add_dev_to_chat(r_id, r_sd);
         handle_chat();
