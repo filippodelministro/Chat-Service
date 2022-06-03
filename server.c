@@ -269,13 +269,15 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
 bool check_if_online(int id){
     int sd = create_chat_socket(id);
     if(sd != -1){
-            //if connection doesnt fail, device is online
-            send_int(ERR_CODE, sd);
-            send_int(IN_OPCODE, sd);
-            return true;
-        }
-        else
-            return false;
+        //if connection doesnt fail, device is online
+        send_int(ERR_CODE, sd);
+        send_int(IN_OPCODE, sd);
+        return true;
+    }
+    else{
+        printf(": %d\n", id);
+        return false;
+    }
 }
 int create_chat_socket(int id){
 

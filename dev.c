@@ -385,7 +385,6 @@ void send_int_broadcast(int num){
         }
     }
 }
-
 int send_msg_broadcast(char buffer[BUFFER_SIZE]){
 //send msg to all devices connected in current chat
 //if single_chat return ID of device in chat
@@ -411,17 +410,15 @@ void handle_chat() {
     help_chat_command();
 
     //fix: begin
-    //when handle_chat starts, there is a single_chat: 
+    //when handle_chat starts, chat is single_chat (two devices) 
     //find device to chat with: used to save chat in file (only for single_chat)
-    /*
     for(int i=0; i<MAX_DEVICES; i++){
         if(devices[i].sd){
             id = i;
             break;
         }
     }
-    */
-    printf("[handle_chat] chatting with %d device: '%s'", n_dev_chat, devices[id].username);
+    printf("[handle_chat] chatting with %d device: '%s'\n", n_dev_chat, devices[id].username);
     //fix: end
 
     while(true){
@@ -451,10 +448,10 @@ void handle_chat() {
                         //fix: begin
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
-                            sprintf(filename, my_device.chat_path, "chat_with_%d.txt", id);
+                            sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
                             printf("filename: %s\n", filename);
-                            FILE *fp = fopen(filename, "w");
-                            fprintf(fp, "%s\n", buffer);
+                            FILE *fp = fopen(filename, "a");
+                            fprintf(fp, "%s", buffer);
                             fclose(fp);
                         }
                         //fix: end
@@ -462,9 +459,11 @@ void handle_chat() {
                         break;
                     case QUIT_CODE:
                         printf("[device] Quit chat!\n");
-                        for(int i=0; i<MAX_DEVICES; i++)
+                        for(int i=0; i<MAX_DEVICES; i++){
                             if(devices[i].sd)
                                 FD_CLR(devices[i].sd, &master);
+                            devices[i].sd = 0;
+                        }
                         return;
 
                     case USER_CODE:
