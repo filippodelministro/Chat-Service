@@ -305,6 +305,19 @@ void append_time(char * buffer, char *msg){
     strftime(tv, 9, "%X", msg_time);
     sprintf(buffer, "%s [%s]: %s", my_device.username, tv, msg);
 }
+void read_chat(int id){
+    char filename[WORD_SIZE];
+    sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
+    FILE* fp = fopen(filename, "r");
+    if(fp){
+        char buff[BUFFER_SIZE];
+        while(fgets(buff, BUFFER_SIZE, fp) != NULL)
+            printf("%s", buff);
+        fclose(fp);
+    }
+    else
+        printf("[chat_command] first chat with %s: opened %s\n", devices[id].username, filename);
+}
 
 void handle_chat_w_server(){
 //handle device comunication with server
@@ -418,6 +431,7 @@ void handle_chat() {
         }
     }
     printf("[handle_chat] chatting with %d device: '%s'\n", n_dev_chat, devices[id].username);
+    read_chat(id);
 
     while(true){
         read_fds = master; 
@@ -446,7 +460,6 @@ void handle_chat() {
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
-                            printf("filename: %s\n", filename);
                             FILE *fp = fopen(filename, "a");
                             fprintf(fp, "%s", buffer);
                             fclose(fp);
@@ -598,7 +611,6 @@ void handle_chat() {
                         if(n_dev_chat == 1){    
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, s_id);
-                            printf("filename: %s\n", filename);
                             FILE *fp = fopen(filename, "a");
                             fprintf(fp, "%s", buffer);
                             fclose(fp);
@@ -974,10 +986,10 @@ void show_command(){
 
     FILE *fp = fopen(filename, "r");
     if(fp){
-        while(fgets(buff, sizeof(buff), fp))
+        while(fgets(buff, sizeof(buff), fp))        //read file and print
             printf("%s", buff);
-            remove(filename);
-            printf("[device] removed file %s\n", filename);
+        remove(filename);
+        printf("[device] removed file %s\n", filename);
     }   
     else{
         printf("[device] there are no pending_messages: try <hanging> before!\n");
@@ -1039,18 +1051,7 @@ void chat_command(){
         int r_sd = create_chat_socket(r_id);
         send_int(my_device.id, r_sd);
 
-        char filename[WORD_SIZE];
-        sprintf(filename, "chat_with_%d.txt", r_id);
-        FILE* fp = fopen(filename, "r");
-        if(fp){
-            char buff[BUFFER_SIZE];
-            while(fgets(buff, 50, fp) != NULL)
-                printf("%s", buff);
-            fclose(fp);
-        }
-        else
-            printf("[chat_command] first chat with %s: opened %s\n", devices[r_id].username, filename);
-
+        sleep(1);
         add_dev_to_chat(r_id, r_sd);
         handle_chat();
 
