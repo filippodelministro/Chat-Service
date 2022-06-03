@@ -120,7 +120,7 @@ void create_srv_socket_tcp(int p){
     if(connect(server.sd, (struct sockaddr*)&server.addr, sizeof(server.addr)) == -1){
         perror("[device]: error connect(): ");
         printf("<server_port> could be wrong; otherwise server is offline: try later\n");
-        exit(-1);
+        // exit(-1);
     }
 
     // printf("[device] create_srv_tcp_socket: waiting for connection...\n");
@@ -316,7 +316,7 @@ void read_chat(int id){
         fclose(fp);
     }
     else
-        printf("[chat_command] first chat with %s: opened %s\n", devices[id].username, filename);
+        printf("[read_chat] first chat with '%s': opened %s\n", devices[id].username, filename);
 }
 
 void handle_chat_w_server(){
@@ -552,7 +552,7 @@ void handle_chat() {
                     }
 
                 }
-                //fix: controllare
+                //fix: controllare caso in cui siamo in chat e server fa ESC
                 else if(i == listening_socket){
                     printf("[handle_chat] received connection request!\n");
                     struct sockaddr_in s_addr;
@@ -565,13 +565,14 @@ void handle_chat() {
                     if(s_id == ERR_CODE){
                         //received request from server
                         printf("[handle_chat] request by server\n");
-                        int cmd = recv_int(s_sd, false);
+                        int cmd = recv_int(s_sd, true);
 
                         switch (cmd){
                             case ESC_OPCODE:
                                 //server is logging out while chat is opened
                                 server.connected = false;
-                                close(server.sd);
+                                if(server.sd)
+                                    close(server.sd);
                                 // FD_CLR(server.sd, &master);
                                 printf("[device] server is now offline!\n");
                                 break;
@@ -588,13 +589,16 @@ void handle_chat() {
                             // return;
                         }
                     }
-                    add_dev_to_chat(s_id, s_sd);
+                    else
+                        add_dev_to_chat(s_id, s_sd);
                 }
-                else if(i != listening_socket /*|| i != server.sd*/){
+                else if(i != listening_socket || i != server.sd){
                     //received message: find device who send it, than receive code and message
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
                     code = recv_int(sock, false);
+
+                    // printf("AAAAAAAAAAAAAAAAAAAAAAA\n");
 
                     switch (code){
                     case OK_CODE:
@@ -748,9 +752,12 @@ void handle_request(){
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     printf("[handle_request] %d devices in chat\n", n_dev_chat);
     
+    //fix: messa per far essere uguale dev che fa chat e dev che riceve in handle_req
+    create_srv_socket_tcp(server.port);
     sleep(1);
     handle_chat();
 
+    close(server.sd);   //fix
     close(s_sd);
     n_dev_chat = 0;
 }
@@ -771,15 +778,13 @@ void help_command(){
 }
 
 void signup_command(){
-    char port[WORD_SIZE];       //fix ?
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
     //get data from stdin
     printf("[device] signup_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
 
-    scanf("%s", port);
-    server.port = atoi(port);
+    scanf("%d", &server.port);
     scanf("%s", username);
     scanf("%s", password);
 
@@ -817,14 +822,12 @@ void signup_command(){
 }
 
 void in_command(){
-    char srv_port[WORD_SIZE];   //fix: come in signup
     char username[WORD_SIZE];
     char password[WORD_SIZE];
 
     //get data from stdin
     printf("[device] in_command:\n[device] insert <srv_port> <username> and <password> to continue\n");
-    scanf("%s", srv_port);
-    server.port = atoi(srv_port);
+    scanf("%d", &server.port);
     scanf("%s", username);
     scanf("%s", password);
 
