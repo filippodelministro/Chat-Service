@@ -541,7 +541,9 @@ void handle_chat() {
                         break;
                     
                     case CLEAR_CODE:
-                        //todo: remove chat_file
+                        char filename[WORD_SIZE];
+                        sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
+                        remove(filename);
                         break;
 
                     default:
