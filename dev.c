@@ -32,7 +32,7 @@ struct device server;
 
 //-----------     SET    -----------------
 //socket which listen connect request from other devices
-int listening_socket;    //socket listener (get connect request)
+int listening_socket;    //listener socket (get connect request)
 
 fd_set master;          //main set: managed with macro 
 fd_set read_fds;        //read set: managed from select() 
@@ -298,7 +298,7 @@ int check_chat_command(char* cmd){
 void append_time(char * buffer, char *msg){
     time_t rawtime; 
     struct tm *msg_time;
-    char tv[8];  
+    char tv[TIMER_SIZE];  
 
     time(&rawtime);
     msg_time = localtime(&rawtime);

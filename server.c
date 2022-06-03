@@ -23,7 +23,7 @@ struct device{
     char* password;
 
     int pend_dev_before_logout;  
-    int pend_dev;               //number of pending device (they have pending_msgs)
+    int pend_dev;               //number of pending device (tot)
 }devices[MAX_DEVICES];          //devices array
 
 int n_dev;                  //number of devices registred
@@ -43,7 +43,7 @@ int fdmax;
 // this messages are saved in "./pending_messages/device_4/from_2.txt"
 int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
-//What a server user can use to interact with server
+//What a server user can server
 //* ///////////////////////////////////////////////////////////////////////
 //*                             COMMANDS                                ///
 //* ///////////////////////////////////////////////////////////////////////
@@ -399,7 +399,6 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
-
 bool authentication(int id, int sock){
     char usr[WORD_SIZE];
     char pswd[WORD_SIZE];
@@ -423,6 +422,7 @@ bool authentication(int id, int sock){
     printf("[authentication] success!\n");
     return true;
 }
+
 //* //////////////////////////////////////////////////////////////////////
 
 void handle_request(){

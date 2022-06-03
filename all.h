@@ -39,15 +39,15 @@
 #define ADD_CODE            65531
 #define SHARE_CODE          65530
 #define HELP_CODE           65529
-#define CLEAR_CODE           65528
+#define CLEAR_CODE          65528
 
 char* DELIMITER = "-";
 
+//utility functions (send & recv)
 void send_int(int i, int sd){
     uint16_t p = htons(i);
     send(sd, (void*)&p, sizeof(uint16_t), 0);
 }
-
 int recv_int(int sd, bool show){
     int num;
     uint16_t num_;
@@ -78,6 +78,12 @@ int recv_int(int sd, bool show){
         case SHARE_CODE:
             printf("SHARE_CODE!\n");
             break;
+        case HELP_CODE:
+            printf("HELP_CODE!\n");
+            break;
+        case CLEAR_CODE:
+            printf("CLEAR_CODE!\n");
+            break;
 
         default:
             printf("%d\n", num);
@@ -87,7 +93,6 @@ int recv_int(int sd, bool show){
     
     return num;
 }
-
 void send_msg(char *str, int sd){
     int len = strlen(str);
     
@@ -100,7 +105,6 @@ void send_msg(char *str, int sd){
         exit(-1);
     }
 }
-
 int recv_msg(int sd, char* ret, bool show){
     int len = recv_int(sd, show);
     int ok;
@@ -117,13 +121,6 @@ int recv_msg(int sd, char* ret, bool show){
     ret = buf;
     return ok;
 }
-
-
-void prompt(){
-	printf("\n> ");
-    fflush(stdout);
-}
-
 void recv_file(int sd, char type[WORD_SIZE], bool show){
     if(show)
         printf("[recv_file] start\n");
@@ -153,7 +150,6 @@ void recv_file(int sd, char type[WORD_SIZE], bool show){
         }
     }
 }
-
 void send_file(FILE *fp, int sd){
     int n;
     char buff[BUFFER_SIZE] = {0};
@@ -173,5 +169,11 @@ void send_file(FILE *fp, int sd){
         }
     }
 }
+
+void prompt(){
+	printf("\n> ");
+    fflush(stdout);
+}
+
 
 
