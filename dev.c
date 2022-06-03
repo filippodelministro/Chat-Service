@@ -409,7 +409,6 @@ void handle_chat() {
     system("clear");
     help_chat_command();
 
-    //fix: begin
     //when handle_chat starts, chat is single_chat (two devices) 
     //find device to chat with: used to save chat in file (only for single_chat)
     for(int i=0; i<MAX_DEVICES; i++){
@@ -419,7 +418,6 @@ void handle_chat() {
         }
     }
     printf("[handle_chat] chatting with %d device: '%s'\n", n_dev_chat, devices[id].username);
-    //fix: end
 
     while(true){
         read_fds = master; 
@@ -444,8 +442,7 @@ void handle_chat() {
                         append_time(buffer, msg);
                         send_msg_broadcast(buffer);
 
-                        //save in chat_file (not groupchat)
-                        //fix: begin
+                        //if single_chat copying on chat_file for chat history
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
@@ -454,7 +451,6 @@ void handle_chat() {
                             fprintf(fp, "%s", buffer);
                             fclose(fp);
                         }
-                        //fix: end
 
                         break;
                     case QUIT_CODE:
@@ -493,7 +489,6 @@ void handle_chat() {
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
-                        // system("clear");
 
                         break;
                     
@@ -598,8 +593,18 @@ void handle_chat() {
                             }
                             break;
                         }
+
+                        //if single_chat copying on chat_file for chat history
+                        if(n_dev_chat == 1){    
+                            char filename[WORD_SIZE];
+                            sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, s_id);
+                            printf("filename: %s\n", filename);
+                            FILE *fp = fopen(filename, "a");
+                            fprintf(fp, "%s", buffer);
+                            fclose(fp);
+                        }
+
                         printf("%s", buffer);
-                        //todo: copia su chat_file
                         break;
 
                     case QUIT_CODE:
