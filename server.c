@@ -43,6 +43,14 @@ int fdmax;
 // this messages are saved in "./pending_messages/device_4/from_2.txt"
 int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
+//todo:
+/*
+struct pend_msg{
+    int num;
+    char time[TIMER_SIZE];
+ }pending_messages2[MAX_DEVICES][MAX_DEVICES];
+*/
+
 //What a server user can server
 //* ///////////////////////////////////////////////////////////////////////
 //*                             COMMANDS                                ///
@@ -83,7 +91,6 @@ void list_command(){
 int create_chat_socket(int);
 void esc_command(){
 //save network status before switching server off
-
     int i, sd;
     FILE* fp = fopen("network_status.txt", "w");
     fprintf(fp, "%d\n", n_dev);
@@ -115,8 +122,10 @@ void esc_command(){
     for(int i=0; i<MAX_DEVICES; i++){
         for(int j=0; j<MAX_DEVICES; j++){
             fprintf(fp, "%d", pending_messages[i][j]);
+            printf("%d", pending_messages[i][j]);
         }
         fprintf(fp, "\n");
+        printf("\n");
     }
     fclose(fp);
 
@@ -382,20 +391,27 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] got devices info\n");
     list_command();
 
-    //fix dont work    
-    /*
-    fp = fopen("pending_messages.txt", "w");
+    //fix dont work
+    fp = fopen("pending_messages.txt", "r");
+    if(!fp){
+        printf("[restore_network] error in opening file: pending_messages got lost!\n");
+        return;
+    }
+
     for(int i=0; i<MAX_DEVICES; i++){
         for(int j=0; j<MAX_DEVICES; j++){
             int val;
-            fscanf(fp, "%d", &val);
-            printf("%d", val);
+            fscanf(fp, "%u", &pending_messages[i][j]);
+            // fscanf(fp, "%d", &val);
+            // printf("%d", val);
+            printf("%d", &pending_messages[i][j]);
         }
-        printf("\n");
+        // printf("\n");
     }
     fclose(fp);
-    */
 
+    remove("network_status.txt");
+    remove("pending_messages.txt");
     printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
