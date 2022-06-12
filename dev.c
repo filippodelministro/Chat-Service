@@ -59,8 +59,8 @@ void help_chat_command(){
                 "1) \\u         --> show all registered user\n"
                 "2) \\a <user>  --> add new user to chat (if online)\n"
                 "3) \\s <file>  --> share <file> to all user in current chat\n"
-                "4) \\q         --> quit chat\n"
-                "5) \\c         --> remove chat history\n",
+                "4) \\c         --> remove chat history\n"
+                "5) \\q         --> quit chat\n",
                 my_device.username
     );
     printf("----------------------------------------------------------\n");
@@ -541,9 +541,15 @@ void handle_chat() {
                         break;
                     
                     case CLEAR_CODE:
-                        char filename[WORD_SIZE];
-                        sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
-                        remove(filename);
+                        if(n_dev_chat == 1){
+                            char filename[WORD_SIZE];
+                            sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
+                            remove(filename);
+                            printf("[device] removed chat_history with %s\n", devices[id].username);
+                        }
+                        else
+                            printf("[device] command '\\c' is not valid during a group_chat\n");
+
                         break;
 
                     default:
@@ -553,6 +559,8 @@ void handle_chat() {
 
                 }
                 //fix: controllare caso in cui siamo in chat e server fa ESC
+                //fix: funziona, ma solo per le single_chat: per quelli aggiunti dopo
+                //fix: non funziona quando server fa ESC
                 else if(i == listening_socket){
                     printf("[handle_chat] received connection request!\n");
                     struct sockaddr_in s_addr;
@@ -752,12 +760,9 @@ void handle_request(){
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     printf("[handle_request] %d devices in chat\n", n_dev_chat);
     
-    //fix: messa per far essere uguale dev che fa chat e dev che riceve in handle_req
-    create_srv_socket_tcp(server.port);
     sleep(1);
     handle_chat();
 
-    close(server.sd);   //fix
     close(s_sd);
     n_dev_chat = 0;
 }

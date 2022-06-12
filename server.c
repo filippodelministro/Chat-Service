@@ -730,7 +730,7 @@ void handle_request(){
         break;
 
     default:
-        printf("[server] halde_request: opcode is not valid!\n");
+        printf("[server] handle_request: opcode is not valid!\n");
         break;
     }
 }
