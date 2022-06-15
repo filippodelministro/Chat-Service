@@ -17,7 +17,8 @@ struct device{
     struct sockaddr_in addr;
     bool connected;
 
-    char time[TIMER_SIZE];
+    char time_login[TIMER_SIZE];
+    char time_logout[TIMER_SIZE];
     int id;
     char* username;
     char* password;
@@ -69,21 +70,16 @@ void list_command(){
     int i;
 
     printf("\n[server] list_command: %u devices registered, %d connected>\n", n_dev, n_conn);
-    if(!n_conn){
+    if(!n_conn)
         printf("\tThere are no devices connected!\n");
-    }
+
     else{
-    printf("\tdev_id\tusername\ttimestamp\tport\tonline\n");
+    printf("\tdev_id\tusername\tport\ttimestamp\tonline\n");
         for(i=0; i<n_dev; i++){
-            
             struct device* d = &devices[i];
-                printf("\t%d\t%s\t\t%s\t%d\t",
-                    d->id, d->username, 
-                    d->time,    
-                    d->port
-                );
-            if(d->connected)printf("[x]\n");
-            else printf("[ ]\n");
+            printf("\t%d\t%s\t\t%d\t", d->id, d->username, d->port);
+            if(d->connected) printf("%s\t[x]\n", d->time_login);
+            else printf("%s\t[ ]\n", d->time_logout);
         }
     }
 }
@@ -102,7 +98,7 @@ void esc_command(){
         fprintf(fp, "%d %s %s %s %d %d %d\n",
             d->id, d->username,
             d->password,
-            d->time,    
+            d->time_login,    
             d->port,
            d->pend_dev_before_logout, d->pend_dev
         );
@@ -224,7 +220,8 @@ int add_dev(const char* usr, const char* pswd){
     d->password = malloc(sizeof(pswd)+1);
     strcpy(d->username, usr);
     strcpy(d->password, pswd);
-    strcpy(d->time, "00:00:00");            //default value: case of signup and not login
+    strcpy(d->time_login, "00:00:00");            //default value: case of signup and not login
+    strcpy(d->time_logout, "00:00:00");
 
     printf("[server] add_dev: added new device!\n"
                     "\t dev_id: %d\n"
@@ -257,12 +254,12 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         d->connected = true;
         n_conn++;
 
-        //handle timestamp
+        //handle time_login
         time_t rawtime;
         struct tm* tv;
         time(&rawtime);
         tv = localtime(&rawtime);
-        strftime(d->time, 9, "%X", tv);
+        strftime(d->time_login, 9, "%X", tv);
 
         //show network info
         list_command();
@@ -372,7 +369,7 @@ void restore_network(FILE* fp){
         d->password = malloc(sizeof(b));        //password
         strcpy(d->password, b);
         b = strtok(NULL, " ");
-        strcpy(d->time, b);                     //time
+        strcpy(d->time_login, b);               //time_login
         b = strtok(NULL, " ");
         d->port = atoi(b);                      //port
         b = strtok(NULL, " ");
@@ -705,6 +702,13 @@ void handle_request(){
         d->pend_dev_before_logout = d->pend_dev;
         d->connected = false;
         n_conn--;
+
+        //handle time_logout
+        time_t rawtime;
+        struct tm* tv;
+        time(&rawtime);
+        tv = localtime(&rawtime);
+        strftime(d->time_logout, 9, "%X", tv);
 
         list_command();
 
