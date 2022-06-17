@@ -81,9 +81,10 @@ void fdt_init(){
     printf("[fdt_init] set init done...\n");
 }
 void init_status(){
+    int i=0;
     server.connected = true;
     n_dev = n_dev_chat = 0;
-    for(int i=0; i<MAX_DEVICES; i++)
+    for(i=0; i<MAX_DEVICES; i++)
         devices[i].sd = 0;
 
    //init set structure 
@@ -208,6 +209,7 @@ void dev_init(int id, const char* usr, const char* pswd){
 void update_devices(){
 //update other devices info; ask to server follwing info for each device registered:
 //username | port | status
+    int i;
     char buffer[BUFFER_SIZE];
     struct device* d;
 
@@ -218,7 +220,7 @@ void update_devices(){
     // sleep(1);
 
     n_dev = recv_int(server.sd, false);
-    for(int i=0; i<n_dev; i++){
+    for(i=0; i<n_dev; i++){
         d = &devices[i];
         
         //receive other devices info
@@ -360,7 +362,6 @@ void handle_chat_w_server(){
             printf("[device] Error: command is not valid: other device is offline\n");
             break;
         case SHARE_CODE:
-            //todo: se ho tempo cambiare e gestire in altro modo (send al server e poi al device)
             printf("[device] Error: command is not valid: other device is offline\n"); 
             break;
         case HELP_CODE:
@@ -390,8 +391,8 @@ void remove_dev_from_chat(int id){
 }
 void send_int_broadcast(int num){
 //send int to all devices connected in current chat
-    int n_iter = 0;
-    for(int i=0; i<MAX_DEVICES && n_iter <= n_dev_chat; i++){
+    int i, n_iter = 0;
+    for(i=0; i<MAX_DEVICES && n_iter <= n_dev_chat; i++){
         if(devices[i].sd){
             send_int(num, devices[i].sd);
             n_iter++;
@@ -402,8 +403,8 @@ int send_msg_broadcast(char buffer[BUFFER_SIZE]){
 //send msg to all devices connected in current chat
 //if single_chat return ID of device in chat
     int ret = -1;
-    int n_send = 0;
-    for(int i=0; i<MAX_DEVICES && n_send < n_dev_chat; i++)     //optimization: max n_dev_chat iteration
+    int i, n_send = 0;
+    for(i=0; i<MAX_DEVICES && n_send < n_dev_chat; i++)     //optimization: max n_dev_chat iteration
         if(devices[i].sd){
             if(n_dev_chat == 1)
                 ret = i;                        //when single_chat return ID of device in chat 
@@ -424,7 +425,7 @@ void handle_chat() {
 
     //when handle_chat starts, chat is single_chat (two devices) 
     //find device to chat with: used to save chat in file (only for single_chat)
-    for(int i=0; i<MAX_DEVICES; i++){
+    for(i=0; i<MAX_DEVICES; i++){
         if(devices[i].sd){
             id = i;
             break;
@@ -439,7 +440,7 @@ void handle_chat() {
 			perror("[handle_chat] Error: select()\n");
 			exit(-1);
         }
-        for (i = 0; i <= fdmax; i++) {
+        for(i = 0; i <= fdmax; i++) {
 			if(FD_ISSET(i, &read_fds)) {
                 if (!i) {
                     //keyboard: sending message
@@ -467,11 +468,12 @@ void handle_chat() {
 
                         break;
                     case QUIT_CODE:
+                        int j;
                         printf("[device] Quit chat!\n");
-                        for(int i=0; i<MAX_DEVICES; i++){
-                            if(devices[i].sd)
-                                FD_CLR(devices[i].sd, &master);
-                            devices[i].sd = 0;
+                        for(j=0; j<MAX_DEVICES; j++){
+                            if(devices[j].sd)
+                                FD_CLR(devices[j].sd, &master);
+                            devices[j].sd = 0;
                         }
                         return;
 
@@ -527,10 +529,10 @@ void handle_chat() {
 
                         //send type, than file to other device
                         printf("[device] sending %s file...\n", type);
-                        for(int i=0; i<MAX_DEVICES; i++){
-                            if(devices[i].sd){
-                                send_msg(type, devices[i].sd);
-                                send_file(fp,  devices[i].sd);
+                        for(j=0; j<MAX_DEVICES; j++){
+                            if(devices[j].sd){
+                                send_msg(type, devices[j].sd);
+                                send_file(fp,  devices[j].sd);
                             }
                         }
                         fclose(fp);
@@ -753,7 +755,6 @@ void handle_request(){
     //received request from device
     update_devices();
     //todo: add check Y/N to connect (handle d->connected)
-    //todo: manage history of chat
 
     add_dev_to_chat(s_id, s_sd);
     n_dev_chat = 1;
@@ -798,7 +799,7 @@ void signup_command(){
         "\t srv_port: %d \n"
         "\t username: %s \n"
         "\t password: %s\n",
-        server.port, username, password
+        server.port, username, PSWD_STRING
     );
 
     //create socket to communicate with server
@@ -841,7 +842,7 @@ void in_command(){
         "\t srv_port: %d \n"
         "\t username: %s \n"
         "\t password: %s\n",
-        server.port, username, password
+        server.port, username, PSWD_STRING
     );
 
     update_devices();
@@ -890,11 +891,12 @@ void in_command(){
 
 void list_command(){
 //print all devices info: id | username | port | status
+    int i;
     struct device* d;
     update_devices();
 
     printf("\tid\tusername\tport\tonline\t\n");
-    for(int i=0; i<n_dev; i++){
+    for(i=0; i<n_dev; i++){
         if(i == my_device.id) printf("=>");
 
         d = &devices[i];
@@ -1193,6 +1195,7 @@ void read_command(){
 //* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char* argv[]){
+    int i;
     if(argc != 2){
 		fprintf(stderr, "Error! Correct syntax: ./dev <port>\n"); 
 		exit(-1);
@@ -1211,7 +1214,7 @@ int main(int argc, char* argv[]){
 			perror("[device] error select() ");
 			exit(-1);
 		}
-        for(int i=0; i<=fdmax; i++){
+        for(i=0; i<=fdmax; i++){
             if(FD_ISSET(i, &read_fds)){              
                 if(!i)                              //keyboard
                     read_command();

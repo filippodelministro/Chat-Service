@@ -87,7 +87,7 @@ void list_command(){
 int create_chat_socket(int);
 void esc_command(){
 //save network status before switching server off
-    int i, sd;
+    int i, j, sd;
     FILE* fp = fopen("network_status.txt", "w");
     fprintf(fp, "%d\n", n_dev);
 
@@ -115,8 +115,8 @@ void esc_command(){
     
     //save pending_messages matrix (files are already saved in ./pending_messages/...)
     fp = fopen("pending_messages.txt", "w");
-    for(int i=0; i<MAX_DEVICES; i++){
-        for(int j=0; j<MAX_DEVICES; j++){
+    for(i=0; i<MAX_DEVICES; i++){
+        for(j=0; j<MAX_DEVICES; j++){
             fprintf(fp, "%d", pending_messages[i][j]);
             printf("%d", pending_messages[i][j]);
         }
@@ -131,8 +131,9 @@ void esc_command(){
 
 bool check_if_online(int);
 void check_command(){
+    int i;
     n_conn = 0;
-    for(int i=0; i<n_dev; i++){
+    for(i=0; i<n_dev; i++){
         if(check_if_online(i)){
             devices[i].connected = true;
             n_conn++;
@@ -238,7 +239,7 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     printf("check_and_connect: checking for device #%d\n"
         "\tusr: %s\n"
         "\tpswd: %s\n", 
-        id, usr, pswd
+        id, usr, PSWD_STRING
     );
 
     if(find_device(usr) == -1){
@@ -347,6 +348,7 @@ void fdt_init(){
     printf("[server] fdt_init: set init done!\n");
 }
 void restore_network(FILE* fp){
+    int i, j;
     printf("[restore_network] network is not empty: restore from 'network_status.txt'\n");
     
     //get numer of devices
@@ -355,7 +357,7 @@ void restore_network(FILE* fp){
 
     //get devices info in following format: |#id usr pswd HH:MM:SS #port|
     char buff[BUFFER_SIZE];
-    for(int i=0; i<n_dev; i++){
+    for(i=0; i<n_dev; i++){
         struct device* d = &devices[i];
         fgets(buff, sizeof(buff), fp);
 
@@ -395,8 +397,8 @@ void restore_network(FILE* fp){
         return;
     }
 
-    for(int i=0; i<MAX_DEVICES; i++){
-        for(int j=0; j<MAX_DEVICES; j++){
+    for(i=0; i<MAX_DEVICES; i++){
+        for(j=0; j<MAX_DEVICES; j++){
             int val;
             fscanf(fp, "%u", &pending_messages[i][j]);
             // fscanf(fp, "%d", &val);
@@ -440,7 +442,7 @@ bool authentication(int id, int sock){
 
 void handle_request(){
     //connecting device
-    int new_dev;
+    int new_dev, i;
     struct device* d;
     struct sockaddr_in new_addr;
     socklen_t addrlen = sizeof(new_addr);
@@ -501,7 +503,7 @@ void handle_request(){
         }
         
         //if here there are pending_messages
-        for(int i=0; i<MAX_DEVICES; i++){
+        for(i=0; i<MAX_DEVICES; i++){
             while(pending_messages[id][i]){
                 //inform that user 'i' did not read pend_msgs
                 send_int(OK_CODE, new_dev);    
@@ -527,7 +529,7 @@ void handle_request(){
 
         //check if there are pending messages and send OK_CODE or ERR_CODE
         ret = ERR_CODE;
-        for(int i=0; i<MAX_DEVICES; i++){
+        for(i=0; i<MAX_DEVICES; i++){
             if(pending_messages[i][id]){
                 ret = OK_CODE;
                 break;
@@ -536,7 +538,7 @@ void handle_request(){
         send_int(ret, new_dev);
 
         //sending for each device: OK_CODE | sender_id | number of message from sender
-        for(int i=0; i<MAX_DEVICES; i++){
+        for(i=0; i<MAX_DEVICES; i++){
             if(pending_messages[i][id]){
                 send_int(OK_CODE, new_dev);
 
@@ -720,7 +722,7 @@ void handle_request(){
         
         //sending number of device, then username of each device
         send_int(n_dev, new_dev);
-        for(int i=0; i<n_dev; i++){
+        for(i=0; i<n_dev; i++){
             d = &devices[i];
             send_msg(d->username, new_dev);
             send_int(d->port, new_dev);
@@ -745,7 +747,7 @@ void handle_request(){
 //* ///////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv){
-    int p;
+    int p, i, j;
 
     if(argc != 2){
 		printf("[server] using default port [4242]\n");
@@ -768,8 +770,8 @@ int main(int argc, char** argv){
         n_conn = n_dev = 0;
 
         //there are no pending messages at firts boot
-        for(int i=0; i<MAX_DEVICES; i++)
-            for(int j=0; j<MAX_DEVICES; j++)
+        for(i=0; i<MAX_DEVICES; i++)
+            for(j=0; j<MAX_DEVICES; j++)
                 pending_messages[i][j] = 0;
     }
 
@@ -792,7 +794,7 @@ int main(int argc, char** argv){
 			perror("[server] error: select() ");
 			exit(-1);
 		}
-        for(int i=0; i<=fdmax; i++){
+        for(i=0; i<=fdmax; i++){
             if(FD_ISSET(i, &read_fds)){
                 if(i == 0)                      
                     read_command();             //keyboard

@@ -42,6 +42,7 @@
 #define CLEAR_CODE          65528
 
 char* DELIMITER = "-";
+char* PSWD_STRING = "**********";
 
 //utility functions (send & recv)
 void send_int(int i, int sd){
