@@ -21,6 +21,7 @@ struct device{
     // int pend_msg;
     char chat_path[15];
     bool hanging_done;
+    bool busy;                  //true if already in chat
 }devices[MAX_DEVICES];
 
 struct device my_device;
@@ -196,7 +197,7 @@ void dev_init(int id, const char* usr, const char* pswd){
                     "\t dev_id: %u \n"
                     "\t username: %s \n"
                     "\t password: %s\n",
-                    d->id, d->username, d->password
+                    d->id, d->username, PSWD_STRING
     ); 
     //all pending_msgs
     struct stat st = {0};
@@ -226,11 +227,13 @@ void update_devices(){
         //receive other devices info
         recv_msg(server.sd, buffer, false);
         int port = recv_int(server.sd, false);
+        bool busy = recv_int(server.sd, false);
         int online = recv_int(server.sd, false);
         bool connected = ((online == OK_CODE) ? true : false);
 
         d->id = i;
         d->port = port;
+        d->busy = busy;
         d->connected = connected;
 
         d->username = malloc(sizeof(buffer));
@@ -320,6 +323,20 @@ void read_chat(int id){
     else
         printf("[read_chat] first chat with '%s': opened %s\n", devices[id].username, filename);
 }
+
+void set_busy(bool val){
+//inform server that device is starting a chat
+    create_srv_socket_tcp(server.port);
+
+    send_opcode(BUSY_OPCODE);
+    send_int(my_device.id, server.sd);
+
+    if(authentication());
+        send_int(val, server.sd);
+
+    close(server.sd);
+}
+
 
 void handle_chat_w_server(){
 //handle device comunication with server
@@ -560,9 +577,9 @@ void handle_chat() {
                     }
 
                 }
-                //fix: controllare caso in cui siamo in chat e server fa ESC
-                //fix: funziona, ma solo per le single_chat: per quelli aggiunti dopo
-                //fix: non funziona quando server fa ESC
+                //fix| controllare caso in cui siamo in chat e server fa ESC
+                //fix| funziona, ma solo per le single_chat: per quelli aggiunti dopo
+                //fix| non funziona quando server fa ESC
                 else if(i == listening_socket){
                     printf("[handle_chat] received connection request!\n");
                     struct sockaddr_in s_addr;
@@ -570,6 +587,7 @@ void handle_chat() {
                     int s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
                     printf("[handle_chat] accepted request\n");
+                    update_devices();
                     int s_id = recv_int(s_sd, false);
 
                     if(s_id == ERR_CODE){
@@ -762,7 +780,9 @@ void handle_request(){
     printf("[handle_request] %d devices in chat\n", n_dev_chat);
     
     sleep(1);
+    set_busy(true);
     handle_chat();
+    set_busy(false);
 
     close(s_sd);
     n_dev_chat = 0;
@@ -895,16 +915,19 @@ void list_command(){
     struct device* d;
     update_devices();
 
-    printf("\tid\tusername\tport\tonline\t\n");
+    printf("\tid\tusername\tport\tonline\tbusy\n");
     for(i=0; i<n_dev; i++){
         if(i == my_device.id) printf("=>");
 
         d = &devices[i];
-        printf("\t%d\t%s\t\t%d\t[",
+        printf("\t%d\t%s\t\t%d\t",
             d->id, d->username, d->port
         );
-        if(d->connected) printf("x]\n");
-        else printf(" ]\n");
+        if(d->connected) printf("[x]\t");
+        else printf("[ ]\t");
+
+        if(d->busy) printf("[x]\n");
+        else printf("[ ]\n");
     }
 }
 
@@ -1060,15 +1083,22 @@ void chat_command(){
     }
     else{
         //handshake with receiver
-        int r_sd = create_chat_socket(r_id);
-        send_int(my_device.id, r_sd);
+        if(devices[r_id].busy){
+            printf("[device] user '%s' is chatting already: try later!\n", devices[r_id].username);
+        }
+        else{
+            int r_sd = create_chat_socket(r_id);
+            send_int(my_device.id, r_sd);
 
-        sleep(1);
-        add_dev_to_chat(r_id, r_sd);
-        handle_chat();
+            set_busy(true);
+            sleep(1);
+            add_dev_to_chat(r_id, r_sd);
+            handle_chat();
+            set_busy(false);
 
-        close(r_sd);
-        n_dev_chat = 0;
+            close(r_sd);
+            n_dev_chat = 0;
+        }
     }
 
     chat_end:

@@ -22,6 +22,7 @@ struct device{
     int id;
     char* username;
     char* password;
+    bool busy;
 
     int pend_dev_before_logout;  
     int pend_dev;               //number of pending device (tot)
@@ -74,12 +75,16 @@ void list_command(){
         printf("\tThere are no devices connected!\n");
 
     else{
-    printf("\tdev_id\tusername\tport\ttimestamp\tonline\n");
+    printf("\tdev_id\tusername\tport\ttimestamp\tonline\tbusy\n");
         for(i=0; i<n_dev; i++){
             struct device* d = &devices[i];
             printf("\t%d\t%s\t\t%d\t", d->id, d->username, d->port);
-            if(d->connected) printf("%s\t[x]\n", d->time_login);
-            else printf("%s\t[ ]\n", d->time_logout);
+
+            if(d->connected) printf("%s\t[x]\t", d->time_login);
+            else printf("%s\t[ ]\t", d->time_logout);
+            
+            if(d->busy) printf("[x]\n");
+            else printf("[ ]\n");
         }
     }
 }
@@ -217,6 +222,7 @@ int add_dev(const char* usr, const char* pswd){
     d->id = n_dev;
     d->pend_dev = 0;
     d->pend_dev_before_logout = 0;
+    d->busy = false;
     d->username = malloc(sizeof(usr)+1);
     d->password = malloc(sizeof(pswd)+1);
     strcpy(d->username, usr);
@@ -228,9 +234,8 @@ int add_dev(const char* usr, const char* pswd){
                     "\t dev_id: %d\n"
                     "\t username: %s\n"
                     "\t password: %s\n",
-                    d->id, d->username, d->password
+                    d->id, d->username, PSWD_STRING
     );
-    printf("ADD_DEV: OK\n");
     return n_dev++;
 }
 int check_and_connect(int id, int po, const char* usr, const char* pswd){
@@ -726,6 +731,7 @@ void handle_request(){
             d = &devices[i];
             send_msg(d->username, new_dev);
             send_int(d->port, new_dev);
+            send_int(d->busy, new_dev);
 
             //sending ONLINE or OFFLINE
             ret = ((d->connected) ? OK_CODE : ERR_CODE);
@@ -734,6 +740,20 @@ void handle_request(){
 
         prompt();
         break;
+    
+        case BUSY_OPCODE:
+        //get id from device
+        id = recv_int(new_dev, false);
+
+        if(!authentication(id, new_dev)){
+            printf("[server] out branch: authentication failed!\n");
+            return;
+        }
+        devices[id].busy = recv_int(new_dev, false);
+        
+        prompt();
+        break;
+
 
     default:
         printf("[server] handle_request: opcode is not valid!\n");
