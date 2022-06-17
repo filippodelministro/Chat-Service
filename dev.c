@@ -587,13 +587,13 @@ void handle_chat() {
                     int s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
                     printf("[handle_chat] accepted request\n");
-                    update_devices();
+                    // update_devices();
                     int s_id = recv_int(s_sd, false);
 
                     if(s_id == ERR_CODE){
                         //received request from server
                         printf("[handle_chat] request by server\n");
-                        int cmd = recv_int(s_sd, true);
+                        int cmd = recv_int(s_sd, false);
 
                         switch (cmd){
                             case ESC_OPCODE:
@@ -779,10 +779,12 @@ void handle_request(){
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
     printf("[handle_request] %d devices in chat\n", n_dev_chat);
     
-    sleep(1);
     set_busy(true);
+    sleep(1);
     handle_chat();
-    set_busy(false);
+
+    if(server.connected)
+        set_busy(false);
 
     close(s_sd);
     n_dev_chat = 0;
@@ -813,14 +815,6 @@ void signup_command(){
     scanf("%d", &server.port);
     scanf("%s", username);
     scanf("%s", password);
-
-    //prompt confermation message
-    printf("[device] signup_command: got your data! \n"
-        "\t srv_port: %d \n"
-        "\t username: %s \n"
-        "\t password: %s\n",
-        server.port, username, PSWD_STRING
-    );
 
     //create socket to communicate with server
     create_srv_socket_tcp(server.port);
@@ -873,7 +867,7 @@ void in_command(){
     sleep(1);
 
     //send username and password to server
-    printf("sending my_device info: usr | pswd | id | port\n");
+    printf("[device] sending info to server to login\n");
     send_msg(username, server.sd);
     send_msg(password, server.sd);    
     send_int(my_device.id, server.sd);
@@ -1094,7 +1088,8 @@ void chat_command(){
             sleep(1);
             add_dev_to_chat(r_id, r_sd);
             handle_chat();
-            set_busy(false);
+            if(server.connected)
+                set_busy(false);
 
             close(r_sd);
             n_dev_chat = 0;

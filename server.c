@@ -138,6 +138,8 @@ bool check_if_online(int);
 void check_command(){
     int i;
     n_conn = 0;
+
+    //todo: check_if_busy
     for(i=0; i<n_dev; i++){
         if(check_if_online(i)){
             devices[i].connected = true;
@@ -391,6 +393,8 @@ void restore_network(FILE* fp){
         }
         else
             d->connected = false;
+
+        //todo: d->busy
     }    
     printf("\n[restore_network] got devices info\n");
     list_command();
