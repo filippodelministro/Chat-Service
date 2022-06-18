@@ -42,6 +42,7 @@
 #define SHARE_CODE          65530
 #define HELP_CODE           65529
 #define CLEAR_CODE          65528
+#define BUSY_CODE           65527
 
 char* DELIMITER = "-";
 char* PSWD_STRING = "**********";

@@ -134,7 +134,7 @@ void esc_command(){
     exit(0);
 }
 
-bool check_if_online(int);
+int check_if_online(int);
 void check_command(){
     int i;
     n_conn = 0;
@@ -280,17 +280,21 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
     if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
     return ERR_CODE;
 }
-bool check_if_online(int id){
+int check_if_online(int id){
+    int busy;
     int sd = create_chat_socket(id);
     if(sd != -1){
         //if connection doesnt fail, device is online
         send_int(ERR_CODE, sd);
         send_int(IN_OPCODE, sd);
-        return true;
+        busy = recv_int(sd, true);
+        close(sd);
+        return busy;
     }
     else{
-        printf(": %d\n", id);
-        return false;
+        printf(": %d\n", id);                        //return:   ERR_CODE -> offline
+        close(sd);                                   //          OK_CODE -> online
+        return ERR_CODE;                             //          BUSY_CODE -> online & busy
     }
 }
 int create_chat_socket(int id){
@@ -387,14 +391,28 @@ void restore_network(FILE* fp){
         d->pend_dev = atoi(b);                  //pend_dev
 
         //inform devices that server is online
-        if(check_if_online(i)){
+        int ret = check_if_online(i);
+        switch (ret){
+        case OK_CODE:
             d->connected = true;
+            d->busy = false;
             n_conn++;
-        }
-        else
+            break;
+        
+        case BUSY_CODE:
+            d->connected = true;
+            d->busy = true;
+            n_conn++;
+            break;
+        
+        case ERR_CODE:
             d->connected = false;
-
-        //todo: d->busy
+            d->busy = false;
+            break;
+        
+        default: printf("[restore_network] check_if_online value not correct\n");
+            break;
+        }
     }    
     printf("\n[restore_network] got devices info\n");
     list_command();

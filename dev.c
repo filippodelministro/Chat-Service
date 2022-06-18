@@ -607,6 +607,12 @@ void handle_chat() {
 
                             case IN_OPCODE:
                                 server.connected = true;
+
+                                if(my_device.busy)
+                                    send_int(BUSY_CODE, s_sd);
+                                else
+                                    send_int(OK_CODE, s_sd);
+                                
                                 // FD_SET(server.sd, &master);
                                 printf("[device] server is online!\n");
                                 break;
@@ -756,6 +762,10 @@ void handle_request(){
         case IN_OPCODE:
             printf("[device] server is online!\n");
             server.connected = true;
+            if(my_device.busy)
+                send_int(BUSY_CODE, s_sd);
+            else
+                send_int(OK_CODE, s_sd);
             break;
 
         case SHOW_OPCODE:
