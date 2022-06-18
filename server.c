@@ -277,8 +277,8 @@ int check_and_connect(int po, const char* usr, const char* pswd){
 
     //if here authentication failed: prompt the reason
     printf("[server] check_and_connect: authentication failed:\n");
-    if(strcmp(d->username, usr))printf("\terror on username: %s\n", usr);
-    if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
+    // if(strcmp(d->username, usr))printf("\terror on username: %s\n", usr);
+    // if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
     return ERR_CODE;
 }
 int check_if_online(int id){
@@ -520,7 +520,9 @@ void handle_request(){
         //add device to list and connect & sending ACK to connection      
         id = check_and_connect(port, username, password);
         send_int(id, new_dev);
-
+        if(id == ERR_CODE)
+            return;
+            
         //check if device had pending_device before logout
         if(devices[id].pend_dev_before_logout)
             send_int(OK_CODE, new_dev);

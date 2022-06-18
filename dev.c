@@ -588,9 +588,6 @@ void handle_chat() {
                     }
 
                 }
-                //fix| controllare caso in cui siamo in chat e server fa ESC
-                //fix| funziona, ma solo per le single_chat: per quelli aggiunti dopo
-                //fix| non funziona quando server fa ESC
                 else if(i == listening_socket){  //received connection request
                     printf("[handle_chat] received connection request!\n");
                     struct sockaddr_in s_addr;
@@ -610,8 +607,8 @@ void handle_chat() {
                             case ESC_OPCODE:
                                 //server is logging out while chat is opened
                                 server.connected = false;
-                                if(server.sd)
-                                    close(server.sd);
+                                // if(server.sd)
+                                //     close(server.sd);
                                 // FD_CLR(server.sd, &master);
                                 printf("[device] server is now offline!\n");
                                 break;
@@ -619,6 +616,7 @@ void handle_chat() {
                             case IN_OPCODE:
                                 server.connected = true;
 
+                                //inform server on device status
                                 if(my_device.busy)
                                     send_int(BUSY_CODE, s_sd);
                                 else
@@ -636,7 +634,7 @@ void handle_chat() {
                         }
                     }
                     else
-                        add_dev_to_chat(s_id, s_sd);
+                        add_dev_to_chat(s_id, s_sd);        //received request from other device
                 }
                 else if(i != listening_socket){  //received message
                     //find device who send it, than receive code and message
@@ -1195,8 +1193,11 @@ void read_command(){
         system("clear");
         return;
     }
+    if (!strncmp(cmd, "out", 3) && my_device.connected){
+        out_command();
+        return;
+    }
 
-    //todo: out is legit while server is off
     if(!server.connected){
         printf("[device] server is offline: try later\n");
         return;
@@ -1235,9 +1236,7 @@ void read_command(){
 		chat_command();
 	// else if (!strncmp(cmd, "share", 5) && my_device.connected)	
     //     share_command();
-    else if (!strncmp(cmd, "out", 3) && my_device.connected)
-        out_command();
-
+    
     //command is not valid: show available command
 	else{
         printf("[device] command is not valid!\n");
