@@ -139,7 +139,6 @@ void check_command(){
     int i;
     n_conn = 0;
 
-    //todo: check_if_busy
     for(i=0; i<n_dev; i++){
         if(check_if_online(i)){
             devices[i].connected = true;
@@ -240,8 +239,14 @@ int add_dev(const char* usr, const char* pswd){
     );
     return n_dev++;
 }
-int check_and_connect(int id, int po, const char* usr, const char* pswd){
+int check_and_connect(int po, const char* usr, const char* pswd){
 //check if device is registred then connect device to network
+    int id = find_device(usr);
+    if(id == -1){
+        printf("[server] check_and_connect: device doesnt exists!\n");
+        return ERR_CODE;
+    }
+
     struct device* d = &devices[id];
     printf("check_and_connect: checking for device #%d\n"
         "\tusr: %s\n"
@@ -249,10 +254,6 @@ int check_and_connect(int id, int po, const char* usr, const char* pswd){
         id, usr, PSWD_STRING
     );
 
-    if(find_device(usr) == -1){
-        printf("[server] check_and_connect: device doesnt exists!\n");
-        return ERR_CODE;
-    }
 
     if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
         //if here device is found
@@ -514,12 +515,11 @@ void handle_request(){
         //receive usr, pswd, id, port from device
         recv_msg(new_dev, username, false);
         recv_msg(new_dev, password, false);
-        id = recv_int(new_dev, false);
         port = recv_int(new_dev, false);
 
         //add device to list and connect & sending ACK to connection      
-        ret = check_and_connect(id, port, username, password);
-        send_int(ret, new_dev);
+        id = check_and_connect(port, username, password);
+        send_int(id, new_dev);
 
         //check if device had pending_device before logout
         if(devices[id].pend_dev_before_logout)
@@ -721,10 +721,11 @@ void handle_request(){
         //get id from device
         id = recv_int(new_dev, false);
 
-        if(!authentication(id, new_dev)){
-            printf("[server] out branch: authentication failed!\n");
-            return;
-        }
+        //fix or remove
+        // if(!authentication(id, new_dev)){
+        //     printf("[server] out branch: authentication failed!\n");
+        //     return;
+        // }
         
         //update device info
         d = &devices[id];

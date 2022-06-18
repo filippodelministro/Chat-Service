@@ -155,8 +155,6 @@ void create_listening_socket_tcp(){
 }
 int create_chat_socket(int id){
 //create socket to connect with other devices diring chat
-    printf("[device] create_chat_socket: BEGIN\n");
-
     //create socket
     if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("socket() error");
@@ -178,7 +176,6 @@ int create_chat_socket(int id){
         exit(-1);
     }
 
-    printf("[device] create_chat_socket: END\n");
     return devices[id].sd;
 }
 
@@ -459,16 +456,20 @@ void handle_chat() {
         }
         for(i = 0; i <= fdmax; i++) {
 			if(FD_ISSET(i, &read_fds)) {
-                if (!i) {
-                    //keyboard: sending message
+                if (!i) {                        //keyboard: sending message
                     //fix: double user [time] at first send
                     fgets(msg, BUFFER_SIZE, stdin);
 
                     //check chat_command: send code to other devices to inform what to do                           
                     code = check_chat_command(msg);
+                    
+                    // if(!server.connected){
+                    //     printf("[device] command not valid")
+                    // }
+
                     send_int_broadcast(code);
                     
-                    switch (code){
+                    switch(code){
                     case OK_CODE:
                         //message: format message and send it
                         append_time(buffer, msg);
@@ -495,11 +496,21 @@ void handle_chat() {
                         return;
 
                     case USER_CODE:
+                        if(!server.connected){
+                            printf("[device] command is not valid while server is offline!\n");
+                            break;
+                        }
+                        
                         list_command();
 
                         break;
                     case ADD_CODE:
                         //get new device info and send to all chat_devices
+                        if(!server.connected){
+                            printf("[device] command is not valid while server is offline!\n");
+                            break;
+                        }
+
                         printf("[device] Type <user> to add to this chat: <user> has to be online!\n");
                         update_devices();
 
@@ -580,7 +591,7 @@ void handle_chat() {
                 //fix| controllare caso in cui siamo in chat e server fa ESC
                 //fix| funziona, ma solo per le single_chat: per quelli aggiunti dopo
                 //fix| non funziona quando server fa ESC
-                else if(i == listening_socket){
+                else if(i == listening_socket){  //received connection request
                     printf("[handle_chat] received connection request!\n");
                     struct sockaddr_in s_addr;
                     socklen_t addrlen = sizeof(s_addr);    
@@ -612,6 +623,7 @@ void handle_chat() {
                                     send_int(BUSY_CODE, s_sd);
                                 else
                                     send_int(OK_CODE, s_sd);
+                                server.sd = s_sd;
                                 
                                 // FD_SET(server.sd, &master);
                                 printf("[device] server is online!\n");
@@ -626,13 +638,11 @@ void handle_chat() {
                     else
                         add_dev_to_chat(s_id, s_sd);
                 }
-                else if(i != listening_socket || i != server.sd){
-                    //received message: find device who send it, than receive code and message
+                else if(i != listening_socket){  //received message
+                    //find device who send it, than receive code and message
                     int s_id = find_device_from_socket(i);
                     int sock = devices[s_id].sd;
                     code = recv_int(sock, false);
-
-                    // printf("AAAAAAAAAAAAAAAAAAAAAAA\n");
 
                     switch (code){
                     case OK_CODE:
@@ -766,6 +776,7 @@ void handle_request(){
                 send_int(BUSY_CODE, s_sd);
             else
                 send_int(OK_CODE, s_sd);
+            server.sd = s_sd;
             break;
 
         case SHOW_OPCODE:
@@ -782,7 +793,7 @@ void handle_request(){
 
     //received request from device
     update_devices();
-    //todo: add check Y/N to connect (handle d->connected)
+    //todo se ho tempo: add check Y/N to connect (handle d->connected)
 
     add_dev_to_chat(s_id, s_sd);
     n_dev_chat = 1;
@@ -869,7 +880,7 @@ void in_command(){
         server.port, username, PSWD_STRING
     );
 
-    update_devices();
+    // update_devices();
     create_srv_socket_tcp(server.port);
 
     //send opcode to server and wait for ack
@@ -880,16 +891,17 @@ void in_command(){
     printf("[device] sending info to server to login\n");
     send_msg(username, server.sd);
     send_msg(password, server.sd);    
-    send_int(my_device.id, server.sd);
+    // send_int(my_device.id, server.sd);
     send_int(my_device.port, server.sd);
 
     //receiving OK_CODE to connection
-    if(recv_int(server.sd, false) == ERR_CODE){
+    int id = recv_int(server.sd, true);
+    if(id == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
         return;
     }
-
+    my_device.id = id;
     create_listening_socket_tcp();
 
     //receive info about pending_messages: OK if dev had pend_msgs before logout
@@ -1089,16 +1101,19 @@ void chat_command(){
         //handshake with receiver
         if(devices[r_id].busy){
             printf("[device] user '%s' is chatting already: try later!\n", devices[r_id].username);
+
+            //todo se ho tempo: mando a server che manderà a dev la richiesta di connessione
         }
         else{
             int r_sd = create_chat_socket(r_id);
             send_int(my_device.id, r_sd);
 
+            //telling server that I am busy and enter the chat
             set_busy(true);
             sleep(1);
             add_dev_to_chat(r_id, r_sd);
             handle_chat();
-            if(server.connected)
+            if(server.connected)            //server could have done ESC during chat
                 set_busy(false);
 
             close(r_sd);
@@ -1152,18 +1167,23 @@ void out_command(){
     create_srv_socket_tcp(server.port);
     send_opcode(OUT_OPCODE);
     send_int(my_device.id, server.sd);
-    if(!authentication()){
-        printf("[device] out_command: authentication failed!\n");
-        exit(-1);
-        return;
-    }
-    sleep(1);
+
+    //fix or remove
+    // if(!authentication()){
+    //     printf("[device] out_command: authentication failed!\n");
+    //     exit(-1);
+    //     return;
+    // }
+    // sleep(1);
     
     my_device.connected = false;
     close(listening_socket);
     FD_CLR(listening_socket, &master);
     close(server.sd);
     printf("[device] You are now offline!\n");
+   
+    sleep(1);
+    exit(0);
 }
 
 void read_command(){
@@ -1176,6 +1196,7 @@ void read_command(){
         return;
     }
 
+    //todo: out is legit while server is off
     if(!server.connected){
         printf("[device] server is offline: try later\n");
         return;
