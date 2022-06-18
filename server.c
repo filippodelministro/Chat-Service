@@ -69,7 +69,6 @@ void help_command(){
 void list_command(){
 //show all registered devices and their status: username | time | port | status 
     int i;
-
     printf("\n[server] list_command: %u devices registered, %d connected>\n", n_dev, n_conn);
     if(!n_conn)
         printf("\tThere are no devices connected!\n");
@@ -136,6 +135,7 @@ void esc_command(){
 
 int check_if_online(int);
 void check_command(){
+//scan all registred devices and check which one is online and busy
     int i;
     n_conn = 0;
 
@@ -254,7 +254,6 @@ int check_and_connect(int po, const char* usr, const char* pswd){
         id, usr, PSWD_STRING
     );
 
-
     if(d && !strcmp(d->username, usr) && !strcmp(d->password, pswd)){
         //if here device is found
         printf("check_and_connect: authentication success!\n");
@@ -277,8 +276,8 @@ int check_and_connect(int po, const char* usr, const char* pswd){
 
     //if here authentication failed: prompt the reason
     printf("[server] check_and_connect: authentication failed:\n");
-    // if(strcmp(d->username, usr))printf("\terror on username: %s\n", usr);
-    // if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
+    if(strcmp(d->username, usr))printf("\terror on username: %s\n", usr);
+    if(strcmp(d->username, usr))printf("\terror on password: %s\n", pswd);
     return ERR_CODE;
 }
 int check_if_online(int id){
@@ -294,12 +293,11 @@ int check_if_online(int id){
     }
     else{
         printf(": %d\n", id);                        //return:   ERR_CODE -> offline
-        close(sd);                                   //          OK_CODE -> online
+        close(sd);                                   //          OK_CODE -> online (not busy)
         return ERR_CODE;                             //          BUSY_CODE -> online & busy
     }
 }
 int create_chat_socket(int id){
-
     //create socket
     if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("socket() error");
@@ -356,7 +354,6 @@ void fdt_init(){
 	FD_SET(0, &master);
 	
 	fdmax = 0;
-
     printf("[server] fdt_init: set init done!\n");
 }
 void restore_network(FILE* fp){
@@ -373,6 +370,7 @@ void restore_network(FILE* fp){
         struct device* d = &devices[i];
         fgets(buff, sizeof(buff), fp);
 
+        //todo: add time_logout
         //use strtok() to get buffer values 
         char* b = strtok(buff, " ");
         d->id = atoi(b);                        //id
@@ -522,7 +520,7 @@ void handle_request(){
         send_int(id, new_dev);
         if(id == ERR_CODE)
             return;
-            
+
         //check if device had pending_device before logout
         if(devices[id].pend_dev_before_logout)
             send_int(OK_CODE, new_dev);
@@ -778,7 +776,6 @@ void handle_request(){
         
         prompt();
         break;
-
 
     default:
         printf("[server] handle_request: opcode is not valid!\n");

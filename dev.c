@@ -154,7 +154,7 @@ void create_listening_socket_tcp(){
     if(listening_socket > fdmax){fdmax = listening_socket;}
 }
 int create_chat_socket(int id){
-//create socket to connect with other devices diring chat
+//create socket to connect with other devices during chat
     //create socket
     if((devices[id].sd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("socket() error");
@@ -260,7 +260,6 @@ int find_device_from_socket(int sock){
     printf("[find_device_from_socket] not found!\n");
     return -1;      //not found
 }
-
 bool authentication(){    
 //send username & password to server to authenticate
     send_msg(my_device.username, server.sd);
@@ -320,7 +319,6 @@ void read_chat(int id){
     else
         printf("[read_chat] first chat with '%s': opened %s\n", devices[id].username, filename);
 }
-
 void set_busy(bool val){
 //inform server that device is starting a chat
     create_srv_socket_tcp(server.port);
@@ -333,7 +331,6 @@ void set_busy(bool val){
 
     close(server.sd);
 }
-
 
 void handle_chat_w_server(){
 //handle device comunication with server
@@ -430,7 +427,7 @@ int send_msg_broadcast(char buffer[BUFFER_SIZE]){
 
 void list_command();
 void handle_chat() {
-    int code, ret, i, id;
+    int code, ret, i, j, id;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
    
@@ -462,11 +459,6 @@ void handle_chat() {
 
                     //check chat_command: send code to other devices to inform what to do                           
                     code = check_chat_command(msg);
-                    
-                    // if(!server.connected){
-                    //     printf("[device] command not valid")
-                    // }
-
                     send_int_broadcast(code);
                     
                     switch(code){
@@ -486,7 +478,6 @@ void handle_chat() {
 
                         break;
                     case QUIT_CODE:
-                        int j;
                         printf("[device] Quit chat!\n");
                         for(j=0; j<MAX_DEVICES; j++){
                             if(devices[j].sd)
@@ -496,6 +487,7 @@ void handle_chat() {
                         return;
 
                     case USER_CODE:
+                        //show network status
                         if(!server.connected){
                             printf("[device] command is not valid while server is offline!\n");
                             break;
@@ -505,7 +497,7 @@ void handle_chat() {
 
                         break;
                     case ADD_CODE:
-                        //get new device info and send to all chat_devices
+                        //add new device to chat; inform all other devices in chat
                         if(!server.connected){
                             printf("[device] command is not valid while server is offline!\n");
                             break;
@@ -516,7 +508,7 @@ void handle_chat() {
 
                         scanf("%s", msg);
                         int n_id = find_device(msg);
-                        send_int_broadcast(n_id);
+                        send_int_broadcast(n_id);           //send even if dev doesnt exists: receiver handle that case
 
                         //check if new_device exists and is online
                         if(n_id == -1){
@@ -536,7 +528,7 @@ void handle_chat() {
                         break;
                     
                     case SHARE_CODE:
-                        //get filename and check if file exists
+                        //get filename and check if file exists, then send it to other devices
                         printf("[device] type <filename> to share\n");
                         system("ls");
                         scanf("%s", msg);
@@ -566,11 +558,13 @@ void handle_chat() {
                         fclose(fp);
                         printf("[device] file shared!\n");
                         break;
+
                     case HELP_CODE:
                         help_chat_command();
                         break;
                     
                     case CLEAR_CODE:
+                        //remove chat_history of current chat (only for single_chats)
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
@@ -595,7 +589,6 @@ void handle_chat() {
                     int s_sd = accept(listening_socket, (struct sockaddr*)&s_addr, &addrlen);
 
                     printf("[handle_chat] accepted request\n");
-                    // update_devices();
                     int s_id = recv_int(s_sd, false);
 
                     if(s_id == ERR_CODE){
@@ -607,30 +600,23 @@ void handle_chat() {
                             case ESC_OPCODE:
                                 //server is logging out while chat is opened
                                 server.connected = false;
-                                // if(server.sd)
-                                //     close(server.sd);
-                                // FD_CLR(server.sd, &master);
                                 printf("[device] server is now offline!\n");
                                 break;
 
                             case IN_OPCODE:
                                 server.connected = true;
 
-                                //inform server on device status
-                                if(my_device.busy)
-                                    send_int(BUSY_CODE, s_sd);
-                                else
-                                    send_int(OK_CODE, s_sd);
+                                //inform server on actual device status
+                                code = (my_device.busy ? BUSY_CODE : OK_CODE);
+                                send_int(code, s_sd);
                                 server.sd = s_sd;
                                 
-                                // FD_SET(server.sd, &master);
                                 printf("[device] server is online!\n");
                                 break;
 
                             default:
                                 printf("[device] Error in server command!\n");
                                 break;
-                            // return;
                         }
                     }
                     else
@@ -677,6 +663,7 @@ void handle_chat() {
                             return;
                         }
                         break;
+
                     case USER_CODE:
                         //nothing to do here
                         break;
@@ -688,7 +675,7 @@ void handle_chat() {
                         
                         //check if new_device exists and is online (double check)
                         if(n_id == ERR_CODE){
-                            printf("[device] failed: new device doesnt exists\n");
+                            printf("[device] failed: new device does not exists\n");
                             break;
                         }
                         if(!devices[n_id].connected){
@@ -702,7 +689,6 @@ void handle_chat() {
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
                         break;
-                    
                     
                     case SHARE_CODE:
                         printf("[device] other device is sending you a file: wait...\n");
@@ -761,6 +747,7 @@ void handle_request(){
         printf("[handle_request] request by server\n");
 
         int cmd = recv_int(s_sd, false);
+
         switch (cmd){
         case ESC_OPCODE:
             printf("[device] server is now offline!\n");
@@ -770,10 +757,8 @@ void handle_request(){
         case IN_OPCODE:
             printf("[device] server is online!\n");
             server.connected = true;
-            if(my_device.busy)
-                send_int(BUSY_CODE, s_sd);
-            else
-                send_int(OK_CODE, s_sd);
+            int code = (my_device.busy ? BUSY_CODE : OK_CODE);
+            send_int(code, s_sd);
             server.sd = s_sd;
             break;
 
@@ -889,11 +874,10 @@ void in_command(){
     printf("[device] sending info to server to login\n");
     send_msg(username, server.sd);
     send_msg(password, server.sd);    
-    // send_int(my_device.id, server.sd);
     send_int(my_device.port, server.sd);
 
-    //receiving OK_CODE to connection
-    int id = recv_int(server.sd, true);
+    //receiving ID for connect
+    int id = recv_int(server.sd, false);
     if(id == ERR_CODE){
         printf("[device] Error in authentication: check usr or pswd and retry\n");
         close(server.sd);
@@ -981,13 +965,12 @@ void hanging_command(){
 
             //receive file with pending_messages
             char type[WORD_SIZE] = {"txt"};
-            recv_file(server.sd, type, false);
+            recv_file(server.sd, type, false);      
         
-            //rename file to handle multiple file
+            //rename file to handle multiple file (need to rename because recv_file() put file in 'recv.txt')
             char new_name[10];
             sprintf(new_name, "%d_from_%d.txt", my_device.id, s_id);
-
-            rename("recv.txt", new_name);
+            rename("recv.txt", new_name);               
             printf("[device] saved in %s\n", new_name);
         }
 
@@ -1162,9 +1145,11 @@ void share_command(){
 
 void out_command(){
     //first handshake
-    create_srv_socket_tcp(server.port);
-    send_opcode(OUT_OPCODE);
-    send_int(my_device.id, server.sd);
+    if(server.connected){
+        create_srv_socket_tcp(server.port);
+        send_opcode(OUT_OPCODE);
+        send_int(my_device.id, server.sd);
+    }
 
     //fix or remove
     // if(!authentication()){
