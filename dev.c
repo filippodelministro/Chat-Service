@@ -883,7 +883,13 @@ void in_command(){
         close(server.sd);
         return;
     }
+
+    //login worked
     my_device.id = id;
+    my_device.username = malloc(sizeof(username));
+    my_device.password = malloc(sizeof(password));
+    strcpy(my_device.username, username);
+    strcpy(my_device.password, password);
     create_listening_socket_tcp();
 
     //receive info about pending_messages: OK if dev had pend_msgs before logout
@@ -936,6 +942,7 @@ void hanging_command(){
     }
 
     //first handshake
+    update_devices();
     create_srv_socket_tcp(server.port);
     send_opcode(HANGING_OPCODE);
     send_int(my_device.id, server.sd);
@@ -977,7 +984,7 @@ void hanging_command(){
         printf("\n[device] received %d messages from %d different devices\n", msg_tot, n_sender);
 
         //extra check
-        if(n_sender >= n_dev){
+        if(n_sender > n_dev){
             printf("[device] Error in pending_messages structure: closing program...\n");
             exit(-1);
         }
@@ -1031,6 +1038,7 @@ void show_command(){
     //notifying server that show_command has been executed
     create_srv_socket_tcp(server.port);
     send_opcode(SHOW_OPCODE);
+    send_int(my_device.id, server.sd);
     if(!authentication()){
         printf("[device] show_command: authentication failed!\n");
         return;
@@ -1149,15 +1157,16 @@ void out_command(){
         create_srv_socket_tcp(server.port);
         send_opcode(OUT_OPCODE);
         send_int(my_device.id, server.sd);
+    
+        if(!authentication()){
+            printf("[device] out_command: authentication failed!\n");
+            exit(-1);
+            return;
+        }
+        sleep(1);
     }
 
     //fix or remove
-    // if(!authentication()){
-    //     printf("[device] out_command: authentication failed!\n");
-    //     exit(-1);
-    //     return;
-    // }
-    // sleep(1);
     
     my_device.connected = false;
     close(listening_socket);

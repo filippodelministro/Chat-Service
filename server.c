@@ -427,14 +427,14 @@ void restore_network(FILE* fp){
         for(j=0; j<MAX_DEVICES; j++){
             int val;
             fscanf(fp, "%u", &pending_messages[i][j]);
-            // fscanf(fp, "%d", &val);
-            // printf("%d", val);
+            fscanf(fp, "%d", &val);
+            printf("%d", val);
             printf("%d", &pending_messages[i][j]);
         }
-        // printf("\n");
+        printf("\n");
     }
     fclose(fp);
-
+    
     remove("network_status.txt");
     remove("pending_messages.txt");
     printf("\n[restore_network] restored pending_messages matrix\n");
@@ -597,6 +597,7 @@ void handle_request(){
 
     case SHOW_OPCODE:
         //first handshake
+        id = recv_int(new_dev, false);
         if(!authentication(id, new_dev)){
             printf("[server] show branch: authentication failed!\n");
             return;
