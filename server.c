@@ -45,7 +45,7 @@ int fdmax;
 // this messages are saved in "./pending_messages/device_4/from_2.txt"
 int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
-//todo:
+//todo: trasformare usando questa
 /*
 struct pend_msg{
     int num;
@@ -122,10 +122,10 @@ void esc_command(){
     for(i=0; i<MAX_DEVICES; i++){
         for(j=0; j<MAX_DEVICES; j++){
             fprintf(fp, "%d", pending_messages[i][j]);
-            printf("%d", pending_messages[i][j]);
+            // printf("%d", pending_messages[i][j]);
         }
         fprintf(fp, "\n");
-        printf("\n");
+        // printf("\n");
     }
     fclose(fp);
 
@@ -417,27 +417,27 @@ void restore_network(FILE* fp){
     list_command();
 
     //fix dont work
-    fp = fopen("pending_messages.txt", "r");
-    if(!fp){
-        printf("[restore_network] error in opening file: pending_messages got lost!\n");
-        return;
-    }
+    // fp = fopen("pending_messages.txt", "r");
+    // if(!fp){
+    //     printf("[restore_network] error in opening file: pending_messages got lost!\n");
+    //     return;
+    // }
 
-    for(i=0; i<MAX_DEVICES; i++){
-        for(j=0; j<MAX_DEVICES; j++){
-            int val;
-            fscanf(fp, "%u", &pending_messages[i][j]);
-            fscanf(fp, "%d", &val);
-            printf("%d", val);
-            printf("%d", &pending_messages[i][j]);
-        }
-        printf("\n");
-    }
-    fclose(fp);
+    // for(i=0; i<MAX_DEVICES; i++){
+    //     for(j=0; j<MAX_DEVICES; j++){
+    //         int val;
+    //         fscanf(fp, "%u", &pending_messages[i][j]);
+    //         fscanf(fp, "%d", &val);
+    //         printf("%d", val);
+    //         printf("%d", &pending_messages[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // fclose(fp);
     
     remove("network_status.txt");
     remove("pending_messages.txt");
-    printf("\n[restore_network] restored pending_messages matrix\n");
+    // printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
 bool authentication(int id, int sock){
@@ -713,20 +713,14 @@ void handle_request(){
         prompt();
         break;
 
-    case SHARE_OPCODE:
-        printf("SHARE BRANCH!\n");
-
-        break;
-
     case OUT_OPCODE:
         //get id from device
         id = recv_int(new_dev, false);
 
-        //fix or remove
-        // if(!authentication(id, new_dev)){
-        //     printf("[server] out branch: authentication failed!\n");
-        //     return;
-        // }
+        if(!authentication(id, new_dev)){
+            printf("[server] out branch: authentication failed!\n");
+            return;
+        }
         
         //update device info
         d = &devices[id];
@@ -811,12 +805,12 @@ int main(int argc, char** argv){
         //first boot from server
         printf("[server] first boot: network is empty\n");
         n_conn = n_dev = 0;
-
-        //there are no pending messages at firts boot
-        for(i=0; i<MAX_DEVICES; i++)
-            for(j=0; j<MAX_DEVICES; j++)
-                pending_messages[i][j] = 0;
     }
+    
+    //no pending messages at boot
+    for(i=0; i<MAX_DEVICES; i++)
+        for(j=0; j<MAX_DEVICES; j++)
+            pending_messages[i][j] = 0;
 
     //Init set structure 
 	fdt_init();
@@ -839,10 +833,10 @@ int main(int argc, char** argv){
 		}
         for(i=0; i<=fdmax; i++){
             if(FD_ISSET(i, &read_fds)){
-                if(i == 0)                      
-                    read_command();             //keyboard
+                if(i == 0)                      //keyboard
+                    read_command();             
                 if(i == listening_socket)       //device request  
-                    handle_request();
+                    handle_request();           
             }	 
         }
     }

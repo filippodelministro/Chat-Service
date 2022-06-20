@@ -468,6 +468,7 @@ void handle_chat() {
                         send_msg_broadcast(buffer);
 
                         //if single_chat copying on chat_file for chat history
+                        //fix: after OUT cause a segfault
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
@@ -642,6 +643,7 @@ void handle_chat() {
                         }
 
                         //if single_chat copying on chat_file for chat history
+                        //fix: after OUT cause a segfault
                         if(n_dev_chat == 1){    
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, s_id);
@@ -649,7 +651,7 @@ void handle_chat() {
                             fprintf(fp, "%s", buffer);
                             fclose(fp);
                         }
-
+                        
                         printf("%s", buffer);
                         break;
 
@@ -890,6 +892,12 @@ void in_command(){
     my_device.password = malloc(sizeof(password));
     strcpy(my_device.username, username);
     strcpy(my_device.password, password);
+    
+    char dir_path[15];
+    sprintf(dir_path, "./chat_device_%d", my_device.id);
+    strcpy(my_device.chat_path, dir_path);
+    printf("IN_CMD: chat_path = %s\n", my_device.chat_path);
+
     create_listening_socket_tcp();
 
     //receive info about pending_messages: OK if dev had pend_msgs before logout
@@ -1115,42 +1123,6 @@ void chat_command(){
     close(server.sd);
 }
 
-/*
-void share_command(){
-    int r_id, r_sd;
-    char filename[WORD_SIZE];
-    char receiver[WORD_SIZE];
-
-    update_devices();
-
-    //get info from user
-    scanf("%s", filename);
-    scanf("%s", receiver);
-    
-    //check if receiver exists & is online, and if file exists
-    if(find_device(receiver) == -1){
-        printf("[device] user '%s' does not exists!\n", receiver);
-        return;
-    }
-
-    //todo: handle case receiver is offline
-
-    FILE* fp = fopen(filename, "r");
-    if(fp == NULL){
-        printf("[device] file '%s' does not exists!\n", filename);
-        return;
-    }
-
-    //send file
-    r_sd = create_chat_socket(r_id);
-
-    send_file(fp, r_sd);
-
-    fclose(fp);
-    printf("SHARE TASK COMPLETED\n");
-}
-*/
-
 void out_command(){
     //first handshake
     if(server.connected){
@@ -1166,8 +1138,6 @@ void out_command(){
         sleep(1);
     }
 
-    //fix or remove
-    
     my_device.connected = false;
     close(listening_socket);
     FD_CLR(listening_socket, &master);
@@ -1228,9 +1198,7 @@ void read_command(){
 		show_command();
     else if (!strncmp(cmd, "chat", 4) && my_device.connected)	
 		chat_command();
-	// else if (!strncmp(cmd, "share", 5) && my_device.connected)	
-    //     share_command();
-    
+
     //command is not valid: show available command
 	else{
         printf("[device] command is not valid!\n");
