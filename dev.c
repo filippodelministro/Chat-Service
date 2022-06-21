@@ -976,14 +976,14 @@ void hanging_command(){
         //for each sender receive sender_id and number of messages received
         printf("\tid\tusername\tn_messages\ttimer\t\n");
         while((recv_int(server.sd, false)) == OK_CODE){
-            char timer[TIMER_SIZE];
-            recv_msg(server.sd, timer, false);  //todo: change in msg_timer
+            char time[TIMER_SIZE];
+            recv_msg(server.sd, time, false);
             s_id = recv_int(server.sd, false);               //sender_id
             msg_from_s = recv_int(server.sd, false);         //number of messages from sender   
 
             msg_tot += msg_from_s;
             n_sender++;
-            printf("\t%d\t%s\t\t%d\t\t%s\n", s_id, devices[s_id].username, msg_from_s, timer);
+            printf("\t%d\t%s\t\t%d\t\t%s\n", s_id, devices[s_id].username, msg_from_s, time);
 
             //receive file with pending_messages
             char type[WORD_SIZE] = {"txt"};

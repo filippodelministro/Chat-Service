@@ -45,7 +45,6 @@ int fdmax;
 // this messages are saved in "./pending_messages/device_4/from_2.txt"
 // int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
-//todo: trasformare usando questa
 struct pend_msg{
     int num;
     char time[TIMER_SIZE];
@@ -567,7 +566,6 @@ void handle_request(){
             if(pending_messages[i][id].num){
                 send_int(OK_CODE, new_dev);
 
-                //todo: change my_time with message_time
                 send_msg(pending_messages[i][id].time, new_dev);    //timer                
                 send_int(i, new_dev);                               //sender_id
                 send_int(pending_messages[i][id].num, new_dev);     //number of messages from sender_id
