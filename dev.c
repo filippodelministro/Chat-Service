@@ -527,38 +527,44 @@ void handle_chat() {
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
+                        printf("[device] added '%s' to this chat!\n", devices[n_id].username);
                         break;
                     
                     case SHARE_CODE:
                         //get filename and check if file exists, then send it to other devices
-                        printf("[device] type <filename> to share\n");
-                        system("ls");
-                        scanf("%s", msg);
+                        if(n_dev_chat == 1){
+                            printf("[device] type <filename> to share\n");
+                            system("ls");
+                            scanf("%s", msg);
 
-                        FILE *fp = fopen(msg, "r");
-                        if(fp == NULL){
-                            printf("[device] file '%s' does not exists!\n", msg);
-                            send_int_broadcast(ERR_CODE);
-                            break;
-                        }
-                        
-                        //file exists: sending it
-                        send_int_broadcast(OK_CODE);
-                        
-                        //get file type from name
-                        char* name = strtok(msg, ".");
-                        char* type = strtok(NULL, ".");
-
-                        //send type, than file to other device
-                        printf("[device] sending %s file...\n", type);
-                        for(j=0; j<MAX_DEVICES; j++){
-                            if(devices[j].sd){
-                                send_msg(type, devices[j].sd);
-                                send_file(fp,  devices[j].sd);
+                            FILE *fp = fopen(msg, "r");
+                            if(fp == NULL){
+                                printf("[device] file '%s' does not exists!\n", msg);
+                                send_int_broadcast(ERR_CODE);
+                                break;
                             }
+                        
+                            //file exists: sending it
+                            send_int_broadcast(OK_CODE);
+                            
+                            //get file type from name
+                            char* name = strtok(msg, ".");
+                            char* type = strtok(NULL, ".");
+
+                            //send type, than file to other device
+                            printf("[device] sending %s file...\n", type);
+                            for(j=0; j<MAX_DEVICES; j++){
+                                if(devices[j].sd){
+                                    send_msg(type, devices[j].sd);
+                                    send_file(fp,  devices[j].sd);
+                                }
+                            }
+                            fclose(fp);
+                            printf("[device] file shared!\n");
                         }
-                        fclose(fp);
-                        printf("[device] file shared!\n");
+                        else
+                            printf("[device] command '\\s' is not valid during a group_chat\n");
+
                         break;
 
                     case HELP_CODE:
@@ -634,7 +640,7 @@ void handle_chat() {
                     case OK_CODE:
                         //receive message
                         if(!recv_msg(devices[s_id].sd, buffer, false)){
-                            printf("[device] other device quit!\n");
+                            printf("[device] '%s' quit this chat!\n", devices[s_id].username);
                             remove_dev_from_chat(s_id);
                             if(!n_dev_chat){
                                 printf("[device] Closing chat\n");
@@ -659,8 +665,7 @@ void handle_chat() {
 
                     case QUIT_CODE:
                         //other device quit
-                        printf("[device] Other device quit...\n");
-                        sleep(1);
+                        printf("[device] '%s' quit this chat!\n", devices[s_id].username);                        sleep(1);
                         remove_dev_from_chat(s_id);
                         if(!n_dev_chat){
                             printf("[device] Closing chat\n");
@@ -686,34 +691,37 @@ void handle_chat() {
                             printf("[device] failed: new device is not online\n");
                             break;
                         }
-                        printf("[device] adding user '%s' to this chat\n", devices[n_id].username);
                         
                         sleep(1);
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
+                        printf("[device] added '%s' to this chat!\n", devices[n_id].username);
                         break;
                     
                     case SHARE_CODE:
-                        printf("[device] other device is sending you a file: wait...\n");
+                        if(n_dev_chat == 1){
+                            printf("[device] other device is sending you a file: wait...\n");
 
-                        //receive OK_CODE to start file transaction, than receive file
-                        if((recv_int(sock, true)) == ERR_CODE){
-                            printf("[device] file transfer failed: sender error!\n");
-                            break;
+                            //receive OK_CODE to start file transaction, than receive file
+                            if((recv_int(sock, true)) == ERR_CODE){
+                                printf("[device] file transfer failed: sender error!\n");
+                                break;
+                            }
+
+                            //get file type [.txt, .c, .h, ecc.]
+                            char type[WORD_SIZE];
+                            recv_msg(sock, type, true);
+
+                            //get file and copy in recv.[type]
+                            printf("[device] receiving %s file...\n", type);
+                            recv_file(sock, type, true);
+                            struct stat st;
+                            stat("recv.txt", &st);
+                            int size = st.st_size;                        
+                            printf("[device] received %d byte: check 'recv.%s'\n", size, type);
                         }
 
-                        //get file type [.txt, .c, .h, ecc.]
-                        char type[WORD_SIZE];
-                        recv_msg(sock, type, true);
-
-                        //get file and copy in recv.[type]
-                        printf("[device] receiving %s file...\n", type);
-                        recv_file(sock, type, true);
-                        struct stat st;
-                        stat("recv.txt", &st);
-                        int size = st.st_size;                        
-                        printf("[device] received %d byte: check 'recv.%s'\n", size, type);
                         break;
                     
                     case HELP_CODE:
@@ -888,18 +896,15 @@ void in_command(){
         return;
     }
 
-    //login worked
+    //login worked: setup device
     my_device.id = id;
     my_device.username = malloc(sizeof(username));
     my_device.password = malloc(sizeof(password));
     strcpy(my_device.username, username);
-    strcpy(my_device.password, password);
-    
+    strcpy(my_device.password, password);    
     char dir_path[15];
     sprintf(dir_path, "./chat_device_%d", my_device.id);
     strcpy(my_device.chat_path, dir_path);
-    printf("IN_CMD: chat_path = %s\n", my_device.chat_path);
-
     create_listening_socket_tcp();
 
     //receive info about pending_messages: OK if dev had pend_msgs before logout
@@ -1099,7 +1104,7 @@ void chat_command(){
     else{
         //handshake with receiver
         if(devices[r_id].busy){
-            printf("[device] user '%s' is chatting already: try later!\n", devices[r_id].username);
+            printf("[device] user '%s' is busy: try later!\n", devices[r_id].username);
 
             //todo se ho tempo: mando a server che manderà a dev la richiesta di connessione
         }
