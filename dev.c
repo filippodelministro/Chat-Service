@@ -1168,6 +1168,13 @@ void read_command(){
         out_command();
         return;
     }
+    if(!strncmp(cmd, "help", 4)){
+        if(my_device.connected)
+            help_command();
+        else
+            boot_message();
+        return;
+    }
 
     if(!server.connected){
         printf("[device] server is offline: try later\n");
@@ -1175,16 +1182,8 @@ void read_command(){
     }
     //'signup' and 'in' allowed only if not connected
     //other command allowed only if connected
-    //todo: move this block before server.connected check
-    if(!strncmp(cmd, "help", 4)){
-        if(my_device.connected)
-            help_command();
-        else
-            boot_message();
-    }
-    //todo ----------
 
-    else if(!strncmp(cmd, "signup", 6)){
+    if(!strncmp(cmd, "signup", 6)){
         if(!my_device.connected)
             signup_command();
         else{
