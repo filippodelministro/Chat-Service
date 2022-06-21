@@ -427,7 +427,7 @@ int send_msg_broadcast(char buffer[BUFFER_SIZE]){
 
 void list_command();
 void handle_chat() {
-    int code, ret, i, j, id;
+    int code, ret, i, j, id, n_id;
     char msg[BUFFER_SIZE];          //message to send
     char buffer[BUFFER_SIZE];       //sending in this format --> <user> [hh:mm:ss]: <msg>
    
@@ -678,7 +678,7 @@ void handle_chat() {
                         break;
 
                     case ADD_CODE:
-                        int n_id = recv_int(sock, true);
+                        n_id = recv_int(sock, true);
                         printf("[device] received 'add_command' from other device\n");
                         update_devices();
                         
@@ -743,7 +743,7 @@ void handle_chat() {
 }
 
 void handle_request(){
-    int s_sd, s_id, s_port;
+    int s_sd, s_id, r_id, s_port;
     char s_username[BUFFER_SIZE];
     struct sockaddr_in s_addr;
     socklen_t addrlen = sizeof(s_addr);    
@@ -775,7 +775,7 @@ void handle_request(){
             break;
 
         case SHOW_OPCODE:
-            int r_id = recv_int(server.sd, false);
+            r_id = recv_int(server.sd, false);
             printf("[device] user '%s' has now read your messages!\n", devices[r_id].username);
             break;
 

@@ -484,6 +484,11 @@ void handle_request(){
 
     //for chat, hanging, show command
     int r_id, s_id;
+    char r_username[WORD_SIZE];
+    char s_username[WORD_SIZE];
+    char dir_path[WORD_SIZE];       //directory
+    char filename[WORD_SIZE];
+    struct stat st = {0};
 
     //accept new connection and get opcode
     new_dev = accept(listening_socket, (struct sockaddr*)&new_addr, &addrlen);
@@ -630,14 +635,6 @@ void handle_request(){
         break;
 
     case CHAT_OPCODE:
-        char r_username[WORD_SIZE];
-        char s_username[WORD_SIZE];
-
-        //directory
-        char dir_path[WORD_SIZE];
-        char filename[WORD_SIZE];
-        struct stat st = {0};
-
         //get sender & receiver info
         s_id = recv_int(new_dev, false);
         r_id = recv_int(new_dev, false);
