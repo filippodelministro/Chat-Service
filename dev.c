@@ -993,7 +993,7 @@ void hanging_command(){
             char new_name[10];
             sprintf(new_name, "%d_from_%d.txt", my_device.id, s_id);
             rename("recv.txt", new_name);               
-            printf("[device] saved in %s\n", new_name);
+            // printf("[device] saved in %s\n", new_name);
         }
 
         printf("\n[device] received %d messages from %d different devices\n", msg_tot, n_sender);

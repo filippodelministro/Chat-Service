@@ -43,15 +43,14 @@ int fdmax;
 //     - coloumn: receiver
 // example: pending_messages[2][4] = 10 => device #2 sent 10 messages to device #4
 // this messages are saved in "./pending_messages/device_4/from_2.txt"
-int pending_messages[MAX_DEVICES][MAX_DEVICES];
+// int pending_messages[MAX_DEVICES][MAX_DEVICES];
 
 //todo: trasformare usando questa
-/*
 struct pend_msg{
     int num;
     char time[TIMER_SIZE];
- }pending_messages2[MAX_DEVICES][MAX_DEVICES];
-*/
+ }pending_messages[MAX_DEVICES][MAX_DEVICES];
+
 
 //What a server user can server
 //* ///////////////////////////////////////////////////////////////////////
@@ -118,14 +117,13 @@ void esc_command(){
     printf("[server] created 'network_status.txt'\n");
     
     //save pending_messages matrix (files are already saved in ./pending_messages/...)
+    //saving just the number of messages, not the time
     fp = fopen("pending_messages.txt", "w");
     for(i=0; i<MAX_DEVICES; i++){
         for(j=0; j<MAX_DEVICES; j++){
-            fprintf(fp, "%d", pending_messages[i][j]);
-            // printf("%d", pending_messages[i][j]);
+            fprintf(fp, "%d", pending_messages[i][j].num);
         }
         fprintf(fp, "\n");
-        // printf("\n");
     }
     fclose(fp);
 
@@ -426,10 +424,10 @@ void restore_network(FILE* fp){
     // for(i=0; i<MAX_DEVICES; i++){
     //     for(j=0; j<MAX_DEVICES; j++){
     //         int val;
-    //         fscanf(fp, "%u", &pending_messages[i][j]);
+    //         fscanf(fp, "%u", &pending_messages[i][j].num);
     //         fscanf(fp, "%d", &val);
     //         printf("%d", val);
-    //         printf("%d", &pending_messages[i][j]);
+    //         printf("%d", &pending_messages[i][j].num);
     //     }
     //     printf("\n");
     // }
@@ -531,7 +529,7 @@ void handle_request(){
         
         //if here there are pending_messages
         for(i=0; i<MAX_DEVICES; i++){
-            while(pending_messages[id][i]){
+            while(pending_messages[id][i].num){
                 //inform that user 'i' did not read pend_msgs
                 send_int(OK_CODE, new_dev);    
                 send_int(i, new_dev);   
@@ -557,7 +555,7 @@ void handle_request(){
         //check if there are pending messages and send OK_CODE or ERR_CODE
         ret = ERR_CODE;
         for(i=0; i<MAX_DEVICES; i++){
-            if(pending_messages[i][id]){
+            if(pending_messages[i][id].num){
                 ret = OK_CODE;
                 break;
             }
@@ -566,13 +564,13 @@ void handle_request(){
 
         //sending for each device: OK_CODE | sender_id | number of message from sender
         for(i=0; i<MAX_DEVICES; i++){
-            if(pending_messages[i][id]){
+            if(pending_messages[i][id].num){
                 send_int(OK_CODE, new_dev);
 
                 //todo: change my_time with message_time
-                send_msg(my_time, new_dev);                     //timer                
-                send_int(i, new_dev);                           //sender_id
-                send_int(pending_messages[i][id], new_dev);     //number of messages from sender_id
+                send_msg(pending_messages[i][id].time, new_dev);    //timer                
+                send_int(i, new_dev);                               //sender_id
+                send_int(pending_messages[i][id].num, new_dev);     //number of messages from sender_id
 
                 char path[WORD_SIZE];
                 sprintf(path, "./pending_messages/device_%d/from_%d.txt", id, i);
@@ -611,8 +609,8 @@ void handle_request(){
         //if OK_CODE show_cmd worked for receiver
         ret = recv_int(new_dev, false);
         if(ret == OK_CODE){
-            printf("[server] sending %d messages from '%s' to '%s'\n", pending_messages[s_id][r_id], devices[s_id].username, devices[r_id].username);
-            pending_messages[s_id][r_id] = 0;
+            printf("[server] sending %d messages from '%s' to '%s'\n", pending_messages[s_id][r_id].num, devices[s_id].username, devices[r_id].username);
+            pending_messages[s_id][r_id].num = 0;
             
             if(devices[s_id].connected){
                 //inform sender that receiver has read pending_messages
@@ -698,12 +696,19 @@ void handle_request(){
             //device is now running handle_chat_w_server() function
             while((recv_int(new_dev, false)) == OK_CODE){
                 recv_msg(new_dev, buffer, false);
-                pending_messages[s_id][r_id]++;
+                pending_messages[s_id][r_id].num++;
+
+                //handle time for message
+                time_t rawtime;
+                struct tm* tv;
+                time(&rawtime);
+                tv = localtime(&rawtime);
+                strftime(pending_messages[s_id][r_id].time, 9, "%X", tv);
                 
                 //copy messages in a file
                 fprintf(fp, buffer);     
             }
-            printf("\ts_id: %d\tr_id: %d\tn_msgs:  %d\n", s_id, r_id, pending_messages[s_id][r_id]);
+            printf("\ts_id: %d\tr_id: %d\tn_msgs:  %d\n", s_id, r_id, pending_messages[s_id][r_id].num);
             fclose(fp);                  
         }
 
@@ -809,8 +814,10 @@ int main(int argc, char** argv){
     
     //no pending messages at boot
     for(i=0; i<MAX_DEVICES; i++)
-        for(j=0; j<MAX_DEVICES; j++)
-            pending_messages[i][j] = 0;
+        for(j=0; j<MAX_DEVICES; j++){
+            pending_messages[i][j].num = 0;
+            strcpy(pending_messages[i][j].time, "00:00:00");
+        }
 
     //Init set structure 
 	fdt_init();
