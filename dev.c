@@ -468,16 +468,18 @@ void handle_chat() {
                         send_msg_broadcast(buffer);
 
                         //if single_chat copying on chat_file for chat history
-                        //fix: after OUT cause a segfault
                         if(n_dev_chat == 1){
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, id);
                             FILE *fp = fopen(filename, "a");
-                            fprintf(fp, "%s", buffer);
-                            fclose(fp);
+                            if(fp){
+                                fprintf(fp, "%s", buffer);
+                                fclose(fp);
+                            }
                         }
 
                         break;
+
                     case QUIT_CODE:
                         printf("[device] Quit chat!\n");
                         for(j=0; j<MAX_DEVICES; j++){
@@ -495,8 +497,8 @@ void handle_chat() {
                         }
                         
                         list_command();
-
                         break;
+
                     case ADD_CODE:
                         //add new device to chat; inform all other devices in chat
                         if(!server.connected){
@@ -525,7 +527,6 @@ void handle_chat() {
                         int n_sd = create_chat_socket(n_id);
                         add_dev_to_chat(n_id, n_sd);
                         send_int(my_device.id, n_sd);           //handshake
-
                         break;
                     
                     case SHARE_CODE:
@@ -643,13 +644,14 @@ void handle_chat() {
                         }
 
                         //if single_chat copying on chat_file for chat history
-                        //fix: after OUT cause a segfault
                         if(n_dev_chat == 1){    
                             char filename[WORD_SIZE];
                             sprintf(filename, "%s/chat_with_%d.txt", my_device.chat_path, s_id);
                             FILE *fp = fopen(filename, "a");
-                            fprintf(fp, "%s", buffer);
-                            fclose(fp);
+                            if(fp){
+                                fprintf(fp, "%s", buffer);
+                                fclose(fp);
+                            }
                         }
                         
                         printf("%s", buffer);
@@ -1168,12 +1170,15 @@ void read_command(){
     }
     //'signup' and 'in' allowed only if not connected
     //other command allowed only if connected
+    //todo: move this block before server.connected check
     if(!strncmp(cmd, "help", 4)){
         if(my_device.connected)
             help_command();
         else
             boot_message();
     }
+    //todo ----------
+
     else if(!strncmp(cmd, "signup", 6)){
         if(!my_device.connected)
             signup_command();

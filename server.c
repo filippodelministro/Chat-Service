@@ -416,7 +416,7 @@ void restore_network(FILE* fp){
     printf("\n[restore_network] got devices info\n");
     list_command();
 
-    //fix dont work
+    //fix: dont work
     // fp = fopen("pending_messages.txt", "r");
     // if(!fp){
     //     printf("[restore_network] error in opening file: pending_messages got lost!\n");
