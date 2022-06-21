@@ -1,11 +1,13 @@
-# Reti_Project
-###### Network's Course Project for _University of Pisa_
+# Chat Service
+###### Network's Course Project for _@University of Pisa_
 The project's aim is to create a working network chat service in which users can send/receive messages and share files using chat.
-Users can ask for a new chat to the server which manage all the online users, linking them for the first time; once linked, devices can chat and share file with other users. They can also join a new groupchat if they `chat` with a user who already has started a chat. 
+Users can ask for a new chat to the server which manage all the online users, linking them for the first time; once linked, devices can chat and share file with other users, even in groupchats.
+Check the [project requirements](docs/chat_service.pdf) for details. 
+
 
 ---
 
-#### DEVICE 
+#### DEVICE
 
 * `signup <srv_port> <username> <password>`: Allow to register a new account in the server service listening at `srv_port`; return error and exit if `username` is already used by another user.
 
@@ -16,13 +18,17 @@ Users can ask for a new chat to the server which manage all the online users, li
 
 * `list`: show all users to send messages
 
-* `hanging`: List all users who send message to the user while offline.
+* `hanging`: List all users who send message while user were offline
 
-* `show <username>`: Show messages sent by `username`.
+* `show <username>`: Show messages sent by `username`
 
-* `chat <username>`: Start a new chat chat with `username` if exists.
-
-* `share <file_name>`: Send `name_file` to connected user(s).
+* `chat <username>`: Start a new chat chat with `username` if exists
+    * `<msg> + ENTER`: send message
+    * `\u`: show other users
+    * `\a <user>`: add user in chat if online and noy busy
+    * `\s <filename>`: share `<filename>` if exists (not allowed in groupchats)
+    * `\c`: clear chat history
+    * `\q`: quit chat 
 
 * `out`: Logout and disconnect.
 
@@ -38,16 +44,22 @@ Users can ask for a new chat to the server which manage all the online users, li
 _Note:_ this does not make users offline; from now on they can just use already existing chat, and not creating new ones.
 
 ---
----
-#### Structure of the project [W.I.P.]
-The projet has two main file which both inlcude an "all.h" file: here all defined all the libraries and data structure for socket programming.
-The two main file are
-    - server.c 
-    - dev.c
 
-Both of this file are devided in few sector:
-    - DECLARATION   :a generic list of data structure and variables declaration
-    - COMMAND       :command list that can be used by user (different from server to device)
-    - UTILTY        :utility function (such as in/out function)
-    - FUNCTION      :function used by main function (can not be used by the user)
-    - MAIN          :main program
+#### USAGE
+You can use the `makefile`, or use `./exec.sh` to compile and execute server and three devices on default port.
+
+Devices can be executed with the following syntax:
+```
+$ ./dev <dev_port>
+```
+
+Server can be executed with the following syntax: [using port 4242]
+
+```
+$ ./server
+```
+or the following to execute on custom port:
+```
+$ ./server <server_port>
+```
+---
