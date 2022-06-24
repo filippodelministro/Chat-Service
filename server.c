@@ -367,7 +367,6 @@ void restore_network(FILE* fp){
         struct device* d = &devices[i];
         fgets(buff, sizeof(buff), fp);
 
-        //todo: add time_logout
         //use strtok() to get buffer values 
         char* b = strtok(buff, " ");
         d->id = atoi(b);                        //id
@@ -412,29 +411,9 @@ void restore_network(FILE* fp){
     }    
     printf("\n[restore_network] got devices info\n");
     list_command();
-
-    //fix: dont work
-    // fp = fopen("pending_messages.txt", "r");
-    // if(!fp){
-    //     printf("[restore_network] error in opening file: pending_messages got lost!\n");
-    //     return;
-    // }
-
-    // for(i=0; i<MAX_DEVICES; i++){
-    //     for(j=0; j<MAX_DEVICES; j++){
-    //         int val;
-    //         fscanf(fp, "%u", &pending_messages[i][j].num);
-    //         fscanf(fp, "%d", &val);
-    //         printf("%d", val);
-    //         printf("%d", &pending_messages[i][j].num);
-    //     }
-    //     printf("\n");
-    // }
-    // fclose(fp);
     
     remove("network_status.txt");
     remove("pending_messages.txt");
-    // printf("\n[restore_network] restored pending_messages matrix\n");
 }
 
 bool authentication(int id, int sock){
@@ -828,7 +807,6 @@ int main(int argc, char** argv){
         //  2. handle request from devices
     while(true){
         read_fds = master;
-        //todo: set check_command() as a deamon
         if(select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("[server] error: select() ");
 			exit(-1);

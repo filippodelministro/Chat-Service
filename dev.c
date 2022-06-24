@@ -15,10 +15,9 @@ struct device{
     int id;
     char* username;
     char* password;
-    bool connected;             //true if chat already open
+    bool connected;             //true if already connected
 
     //chat info
-    // int pend_msg;
     char chat_path[15];
     bool hanging_done;
     bool busy;                  //true if already in chat
@@ -42,7 +41,6 @@ int fdmax;
 //-----------    CHAT   -----------------
 int n_dev_chat;                     //number of devices in chat
 
-//maybe in an unic extern file utility.c            ???
 //* ///////////////////////////////////////////////////////////////////////
 //*                                 UTILITY                             ///
 //* ///////////////////////////////////////////////////////////////////////
@@ -74,7 +72,6 @@ void help_chat_command(){
 void fdt_init(){
     FD_ZERO(&master);
 	FD_ZERO(&read_fds);
-    // FD_ZERO(&write_fds);
 	FD_SET(0, &master);
 	
 	fdmax = 0;
@@ -788,8 +785,6 @@ void handle_request(){
 
     //received request from device
     update_devices();
-    //todo se ho tempo: add check Y/N to connect (handle d->connected)
-
     add_dev_to_chat(s_id, s_sd);
     n_dev_chat = 1;
     printf("[device] Received conncection request from '%s'\n", devices[s_id].username);
@@ -1105,8 +1100,6 @@ void chat_command(){
         //handshake with receiver
         if(devices[r_id].busy){
             printf("[device] user '%s' is busy: try later!\n", devices[r_id].username);
-
-            //todo se ho tempo: mando a server che manderà a dev la richiesta di connessione
         }
         else{
             int r_sd = create_chat_socket(r_id);
