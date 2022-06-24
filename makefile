@@ -20,3 +20,4 @@ gdb:
 	gcc -g -Wall dev.c -o dev
 	gcc -g -Wall server.c  -o server 
  
+#Filippo Del Ministro, 24.06.22

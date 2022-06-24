@@ -1,3 +1,6 @@
+#Filippo Del Ministro, 24.06.22
+
+
 # 1. COMPILAZIONE
 # Il comando 'make' necessita del makefile, che deve essere
 # creato come descritto nella guida sulla pagina Elearn
