@@ -25,7 +25,7 @@ Check the [project requirements](docs/chat_service.pdf) for details.
 * `chat <username>`: Start a new chat chat with `username` if exists
     * `<msg> + ENTER`: send message
     * `\u`: show other users
-    * `\a <user>`: add user in chat if online and noy busy
+    * `\a <user>`: add user in chat if online and not busy
     * `\s <filename>`: share `<filename>` if exists (not allowed in groupchats)
     * `\c`: clear chat history
     * `\q`: quit chat 
